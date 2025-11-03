@@ -1,0 +1,23 @@
+{
+  "name": "kafka-ts-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --loader ts-node/esm src/index.ts",
+    "start": "node --loader ts-node/esm src/index.ts",
+    "build": "tsc -p ."
+  },
+  "dependencies": {
+    "@kurrent/kurrentdb-client": "^1.1.0",
+    "@types/socket.io": "^3.0.1",
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

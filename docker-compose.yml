@@ -1,0 +1,94 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9094:9094"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    ports:
+      - "8080:8080"
+
+  kurrentdb:
+    image: kurrentplatform/kurrentdb:25.1.0
+    container_name: kurrentdb
+    restart: unless-stopped
+    environment:
+      KURRENTDB_CLUSTER_SIZE: 1
+      KURRENTDB_DISCOVER_VIA_DNS: "false"
+      KURRENTDB_RUN_PROJECTIONS: All
+      KURRENTDB_START_STANDARD_PROJECTIONS: "true"
+      KURRENTDB_NODE_IP: 0.0.0.0
+      KURRENTDB_NODE_PORT: 2113
+      KURRENTDB_INSECURE: "true"
+      KURRENTDB_ADVERTISE_HOST_TO_CLIENT_AS: kurrentdb
+      KURRENTDB_MEM_DB: "false"
+      KURRENTDB_ENABLE_ATOM_PUB_OVER_HTTP: "true"
+    ports:
+      - "2113:2113" # gRPC / HTTP API
+    volumes:
+      - kurrent-data:/var/lib/eventstore
+      - kurrent-logs:/var/log/eventstore
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2113/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  read-db:
+    image: postgres:17
+    container_name: kurrent_read_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kodawari
+      POSTGRES_PASSWORD: kodawari
+      POSTGRES_DB: kodawari-read-model
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kodawari -d read_model"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./apps/api
+    container_name: api
+    environment:
+      - PORT=3000
+      - KAFKA_BROKERS=kafka:9092
+      - GROUP_ID=api
+      - KURRENTDB_CONNECTION_STRING=esdb://kurrentdb:2113?tls=false
+      - READ_DB_URL=postgres://app:app@read-db:5432/read_model
+    depends_on:
+      - kafka
+      - read-db
+      - kurrentdb
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  kurrent-data:
+  kurrent-logs:

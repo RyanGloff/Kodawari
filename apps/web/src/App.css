@@ -1,0 +1,27 @@
+.App {
+  height: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+}
+
+a {
+  all: unset;
+  display: block;
+  padding: 1rem;
+}
+
+nav {
+  background: var(--bg-dark);
+  height: 100%;
+  box-shadow: var(--shadow-right);
+}
+
+nav > * {
+  cursor: pointer;
+  padding: 1rem;
+}
+
+.nav-header {
+  display: flex;
+}
+
