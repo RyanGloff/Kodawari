@@ -1,0 +1,62 @@
+services:
+  kurrentdb:
+    image: kurrentplatform/kurrentdb:25.1.0
+    platform: linux/amd64
+    restart: unless-stopped
+    container_name: kurrentdb
+    environment:
+      KURRENTDB_INSECURE: "true" # dev only
+      KURRENTDB_NODE_IP: "0.0.0.0" # <-- bind to all interfaces
+      KURRENTDB_NODE_PORT: "2113" # HTTP/gRPC port
+      KURRENTDB_RUN_PROJECTIONS: "All"
+      KURRENTDB_START_STANDARD_PROJECTIONS: "true"
+      KURRENTDB_DISCOVER_VIA_DNS: "false"
+      # (optional, for clients that discover via DNS/hostnames)
+      KURRENTDB_ADVERTISE_HOST_TO_CLIENT_AS: "localhost"
+      KURRENTDB_ADVERTISE_NODE_PORT_TO_CLIENT_AS: "2113"
+    ports:
+      - "2113:2113"
+    volumes:
+      - kurrent-data:/var/lib/eventstore
+      - kurrent-logs:/var/log/eventstore
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2113/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  read-db:
+    image: postgres:17
+    container_name: kurrent_read_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kodawari
+      POSTGRES_PASSWORD: kodawari
+      POSTGRES_DB: kodawari-read-model
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kodawari -d read_model"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./apps/api
+    container_name: api
+    environment:
+      - PORT=3000
+      - KURRENTDB_CONNECTION_STRING=esdb://kurrentdb:2113?tls=false
+      - READ_DB_URL=postgres://app:app@read-db:5432/read_model
+    depends_on:
+      - read-db
+      - kurrentdb
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  kurrent-data:
+  kurrent-logs:

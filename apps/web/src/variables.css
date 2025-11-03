@@ -1,0 +1,29 @@
+:root {
+  --bg-darkest: hsl(0, 0%, 15%);
+  --bg-dark: hsl(0, 0%, 25%);
+  --bg: hsl(0, 0%, 35%);
+  --bg-light: hsl(0, 0%, 45%);
+  --bg-lightest: hsl(0, 0%, 55%);
+
+  --text-lightest: hsl(0, 0%, 95%);
+  --text-light: hsl(0, 0%, 85%);
+  --text: hsl(0, 0%, 75%);
+  --text-dark: hsl(0, 0%, 65%);
+  --text-darkest: hsl(0, 0%, 55%);
+
+  --shadow-s: 
+  inset 0 1px 2px #ffffff28, /* top highlight */
+  0 1px 2px #00000028; /* dark shadow */
+  --shadow-m: 
+  inset 0 2px 4px #ffffff28, /* top highlight */
+  0 2px 4px #00000028; /* dark shadow */
+  --shadow-l: 
+  inset 0 4px 8px #ffffff28, /* top highlight */
+  0 4px 8px #00000028; /* dark shadow */
+  --shadow-right:
+  inset -2px 0 2px #ffffff28,
+  8px 0 8px #00000028;
+  --shadow-left:
+  inset 2px 0 2px #ffffff28,
+  -8px 0 8px #00000028;
+}

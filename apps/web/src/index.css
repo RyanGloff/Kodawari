@@ -1,0 +1,13 @@
+html,
+body {
+  height: 100vh;
+  background: var(--bg-darkest);
+  color: var(--text-lightest);
+  font-family: 'Courier New', Courier, monospace;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100%;
+}
