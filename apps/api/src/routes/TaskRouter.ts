@@ -11,7 +11,9 @@ import {
 import {
   jsonEvent,
   WrongExpectedVersionError,
-  START
+  START,
+  ResolvedEvent,
+  EventType
 } from "@kurrent/kurrentdb-client";
 
 const router = Router();
@@ -59,45 +61,71 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ---------- Get Task By Id -------
-
-router.get('/:id', async (req, res) => {
-  const id = req.params.id;
-  let state: any = null;
-
+type TaskProjection = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  revision: bigint;
+  deleted: boolean;
+};
+async function createTaskProjection(id: string, events: AsyncIterableIterator<ResolvedEvent<EventType>>): Promise<TaskProjection | null> {
+  let state: TaskProjection | null = null;
   try {
-    for await (const r of kdb.readStream(id, { fromRevision: START })) {
+    for await (const r of events) {
       if (!r.event) continue;
       if (r.event.type === taskCreatedEvent) {
         const data = r.event.data as TaskCreated;
-        state = { id, ... data, version: r.event.revision, deleted: false };
+        state = { id, ... data, revision: r.event.revision, deleted: false, createdAt: r.event.created, updatedAt: r.event.created };
       }
       if (r.event.type === taskUpdatedEvent) {
         const data = r.event.data as TaskUpdated;
-        state = { ... state, ... data, version: r.event.revision };
+        if (state === null) {
+          throw new Error(`Task with id: ${id} was updated before it was created`);
+        }
+        state = { ... state, ... data, revision: r.event.revision, updatedAt: r.event.created };
       }
       if (r.event.type === taskDeletedEvent) {
+        if (state === null) {
+          throw new Error(`Task with id: ${id} was updated before it was created`);
+        }
         state.deleted = true;
       }
     }
   } catch (err: any) {
     if (err.type === 'stream-not-found') {
-      res.sendStatus(404);
-      return;
+      return null;
     }
     if (err.type === 'stream-deleted') {
-      res.sendStatus(404);
-      return;
+      return null;
     }
     throw err;
   }
+  return state;
+}
 
-  if (!state) {
+// ---------- Get Task By Id -------
+
+router.get('/:id', async (req, res) => {
+  const id = req.params.id;
+  const projection = await createTaskProjection(id, kdb.readStream(id, { fromRevision: START }));
+  if (projection === null) {
     res.sendStatus(404);
     return;
   }
 
-  res.json(state);
+  res.json(projection);
+});
+
+// ---------- Get All Tasks --------
+// TODO: Replace with projection as this doesn't scale
+
+router.get('/', async (_req, res) => {
+  const stream = "$ce-Task";
+  const aggregates = new Map<string, any>();
+
+  const events = await kdb.readStream(stream, { fromRevision: START });
+    
 });
 
 // ---------- Update Task ----------
