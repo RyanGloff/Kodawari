@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Router } from "express";
 import { kdb } from "../kurrent.js";
 import z from "zod";
@@ -18,8 +19,6 @@ import {
 
 const router = Router();
 
-let nextTaskId = 1;
-
 // ---------- Create Task ----------
 
 const createTaskRequestSchema = z.object({
@@ -36,7 +35,7 @@ router.post("/", async (req, res) => {
     });
   }
 
-  const id = `Task-${nextTaskId++}`;
+  const id = `Task-${randomUUID()}`;
   const createTaskRequest: CreateTaskRequest = parseResult.data;
 
   const taskCreated: TaskCreated = {
@@ -69,47 +68,47 @@ type TaskProjection = {
   revision: bigint;
   deleted: boolean;
 };
-async function createTaskProjection(id: string, events: AsyncIterableIterator<ResolvedEvent<EventType>>): Promise<TaskProjection | null> {
-  let state: TaskProjection | null = null;
-  try {
-    for await (const r of events) {
-      if (!r.event) continue;
-      if (r.event.type === taskCreatedEvent) {
-        const data = r.event.data as TaskCreated;
-        state = { id, ... data, revision: r.event.revision, deleted: false, createdAt: r.event.created, updatedAt: r.event.created };
-      }
-      if (r.event.type === taskUpdatedEvent) {
-        const data = r.event.data as TaskUpdated;
-        if (state === null) {
-          throw new Error(`Task with id: ${id} was updated before it was created`);
-        }
-        state = { ... state, ... data, revision: r.event.revision, updatedAt: r.event.created };
-      }
-      if (r.event.type === taskDeletedEvent) {
-        if (state === null) {
-          throw new Error(`Task with id: ${id} was updated before it was created`);
-        }
-        state.deleted = true;
-      }
+async function createProjectionsFromEvents(events: AsyncIterableIterator<ResolvedEvent<EventType>>): Promise<Map<string, TaskProjection>> {
+  const taskMap = new Map<string, TaskProjection>();
+  for await (const r of events) {
+    if (!r.event) continue;
+    const streamId = r.event.streamId;
+    if (r.event.type === taskCreatedEvent) {
+      const data = r.event.data as TaskCreated;
+      taskMap.set(streamId, { id: streamId, ... data, revision: r.event.revision, deleted: false, createdAt: r.event.created, updatedAt: r.event.created });
     }
-  } catch (err: any) {
-    if (err.type === 'stream-not-found') {
-      return null;
+    if (r.event.type === taskUpdatedEvent) {
+      const data = r.event.data as TaskUpdated;
+      if (!taskMap.has(streamId)) {
+        throw new Error(`Task with id: ${streamId} was updated before it was created`);
+      }
+      const oldTask = taskMap.get(streamId);
+      if (!oldTask) {
+        throw new Error(`Can not update a non-existing task`);
+      }
+      taskMap.set(streamId, { ... oldTask, ... data, revision: r.event.revision, updatedAt: r.event.created });
     }
-    if (err.type === 'stream-deleted') {
-      return null;
+    if (r.event.type === taskDeletedEvent) {
+      if (!taskMap.has(streamId)) {
+        throw new Error(`Task with id: ${streamId} was deleted before it was created`);
+      }
+      const oldTask = taskMap.get(streamId);
+      if (!oldTask) {
+        continue;
+      }
+      oldTask.deleted = true;
     }
-    throw err;
   }
-  return state;
+  return taskMap;
 }
 
 // ---------- Get Task By Id -------
 
 router.get('/:id', async (req, res) => {
   const id = req.params.id;
-  const projection = await createTaskProjection(id, kdb.readStream(id, { fromRevision: START }));
-  if (projection === null) {
+  const projectionMap = await createProjectionsFromEvents(kdb.readStream(id, { fromRevision: START }));
+  const projection = projectionMap.get(id);
+  if (!projection) {
     res.sendStatus(404);
     return;
   }
@@ -122,10 +121,12 @@ router.get('/:id', async (req, res) => {
 
 router.get('/', async (_req, res) => {
   const stream = "$ce-Task";
-  const aggregates = new Map<string, any>();
-
-  const events = await kdb.readStream(stream, { fromRevision: START });
-    
+  try {
+    const taskMap = await createProjectionsFromEvents(kdb.readStream(stream, { fromRevision: START }));
+    res.json(taskMap.values());
+  } catch (err) {
+    res.sendStatus(500);
+  }
 });
 
 // ---------- Update Task ----------

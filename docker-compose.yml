@@ -26,22 +26,34 @@ services:
       retries: 30
 
   read-db:
-    image: postgres:17
-    container_name: kurrent_read_db
+    image: postgres:16
     restart: unless-stopped
     environment:
       POSTGRES_USER: kodawari
       POSTGRES_PASSWORD: kodawari
-      POSTGRES_DB: kodawari-read-model
+      POSTGRES_DB: kodawari-readdb
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - readdb:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kodawari -d read_model"]
+      test: ["CMD-SHELL", "pg_isready -U kodawari -d kodawari-readdb"]
       interval: 5s
       timeout: 3s
       retries: 30
+  liquibase:
+    image: liquibase/liquibase:4.25
+    depends_on:
+      read-db:
+        condition: service_healthy
+    volumes:
+      - ./apps/readdb/liquibase:/liquibase/changelog
+    command: >
+      --url=jdbc:postgresql://read-db:5432/kodawari-readdb
+      --changeLogFile=/liquibase/changelog/changelog.xml
+      --username=kodawari
+      --password=kodawari
+      update
 
   api:
     build: ./apps/api
@@ -57,6 +69,6 @@ services:
       - "3000:3000"
 
 volumes:
-  pgdata:
+  readdb:
   kurrent-data:
   kurrent-logs:
