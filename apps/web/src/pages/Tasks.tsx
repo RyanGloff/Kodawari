@@ -1,5 +1,10 @@
-import './Tasks.css';
+import "./Tasks.css";
+import { TasksPageTaskList } from "../components/TasksPageTaskList";
 
 export default function Tasks() {
-  return <h1>Tasks</h1>;
+  return (
+    <>
+      <TasksPageTaskList />
+    </>
+  );
 }

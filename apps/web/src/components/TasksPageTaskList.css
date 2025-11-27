@@ -1,0 +1,7 @@
+ul {
+  all: unset;
+}
+
+.body > div > * {
+  display: inline-block;
+}
