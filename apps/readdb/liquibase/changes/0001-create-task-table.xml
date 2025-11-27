@@ -1,21 +1,46 @@
-<changeSet id="001-create-task-table" author="ryan">
-    <createTable tableName="tasks">
-        <column name="id" type="text">
-            <constraints primaryKey="true" nullable="false"/>
-        </column>
-        <column name="name" type="text" />
-        <column name="deleted" type="boolean" defaultValueBoolean="false" />
-        <column name="revision" type="bigint" />
-        <column name="created_at" type="timestamp with time zone" />
-        <column name="updated_at" type="timestamp with time zone" />
-    </createTable>
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+           http://www.liquibase.org/xml/ns/dbchangelog
+           http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-    <createIndex indexName="idx_tasks_created_at" tableName="tasks">
-        <column name="created_at"/>
-    </createIndex>
+    <changeSet id="0001-create-task-table" author="ryan">
+        <createTable tableName="tasks">
+            <column name="id" type="text">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
 
-    <createIndex indexName="idx_tasks_deleted" tableName="tasks">
-        <column name="deleted"/>
-    </createIndex>
-</changeSet>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="deleted" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="revision" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_tasks_created_at" tableName="tasks">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex indexName="idx_tasks_deleted" tableName="tasks">
+            <column name="deleted"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
 

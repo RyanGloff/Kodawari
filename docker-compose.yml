@@ -50,10 +50,23 @@ services:
       - ./apps/readdb/liquibase:/liquibase/changelog
     command: >
       --url=jdbc:postgresql://read-db:5432/kodawari-readdb
-      --changeLogFile=/liquibase/changelog/changelog.xml
+      --search-path=/liquibase/changelog
+      --changeLogFile=changelog.xml
       --username=kodawari
       --password=kodawari
       update
+
+  api-projection-worker:
+    build: ./apps/apiProjectionWorker
+    container_name: api-projection-worker
+    environment:
+      - PG_HOST=read-db
+      - PG_DATABASE=kodawari-readdb
+      - PG_USERNAME=kodawari
+      - PG_PASSWORD=kodawari
+    depends_on:
+      - read-db
+      - kurrentdb
 
   api:
     build: ./apps/api
