@@ -60,21 +60,29 @@ services:
     build: ./apps/apiProjectionWorker
     container_name: api-projection-worker
     environment:
+      - KURRENTDB_CONNECTION_STRING=kurrentdb://kurrentdb:2113?tls=false
       - PG_HOST=read-db
       - PG_DATABASE=kodawari-readdb
       - PG_USERNAME=kodawari
       - PG_PASSWORD=kodawari
     depends_on:
-      - read-db
-      - kurrentdb
+      read-db:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+      kurrentdb:
+        condition: service_healthy
 
   api:
     build: ./apps/api
     container_name: api
     environment:
       - PORT=3000
-      - KURRENTDB_CONNECTION_STRING=esdb://kurrentdb:2113?tls=false
-      - READ_DB_URL=postgres://app:app@read-db:5432/read_model
+      - KURRENTDB_CONNECTION_STRING=kurrentdb://kurrentdb:2113?tls=false
+      - PG_HOST=read-db
+      - PG_DATABASE=kodawari-readdb
+      - PG_USERNAME=kodawari
+      - PG_PASSWORD=kodawari
     depends_on:
       - read-db
       - kurrentdb
