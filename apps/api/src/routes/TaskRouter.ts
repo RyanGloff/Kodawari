@@ -46,6 +46,14 @@ router.get("/:id", async (req, res) => {
   res.json(taskProjectionRes.rows[0]);
 });
 
+// ---------- Get All Tasks --------
+router.get("/", async (_req, res) => {
+  // TODO: Change this to something less insane
+  const taskProjectionRes = await pg.query(`SELECT * FROM public.tasks;`);
+
+  res.json({ tasks: taskProjectionRes.rows });
+});
+
 // ---------- Create Task ----------
 
 const createTaskRequestSchema = z.object({
