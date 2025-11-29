@@ -21,9 +21,7 @@ export function TasksPageTaskList() {
           ) : (
             <li key={task.id}>
               <details>
-                <summary>
-                  <h2 className="name">{task.name}</h2>
-                </summary>
+                <summary>{task.name}</summary>
                 <div className="body">
                   <div>
                     <label>Created At:</label>
