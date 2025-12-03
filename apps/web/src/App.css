@@ -2,6 +2,7 @@
   height: 100%;
   display: grid;
   grid-template-columns: auto 1fr;
+  grid-template-areas: "nav body";
 }
 
 a {
@@ -14,6 +15,7 @@ nav {
   background: var(--bg-dark);
   height: 100%;
   box-shadow: var(--shadow-right);
+  grid-area: nav;
 }
 
 nav > * {
@@ -24,4 +26,11 @@ nav > * {
 .nav-header {
   display: flex;
 }
+
+.main {
+  grid-area: body;
+}
+
+
+
 

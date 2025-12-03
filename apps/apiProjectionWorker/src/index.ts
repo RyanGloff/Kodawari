@@ -49,9 +49,11 @@ async function startProjector() {
 
 type TaskCreated = {
   name: string;
+  deadline?: Date;
 };
 type TaskUpdated = {
   name: string;
+  deadline?: Date;
 };
 
 async function handleEvent(event: RecordedEvent<EventType>) {
@@ -65,10 +67,10 @@ async function handleEvent(event: RecordedEvent<EventType>) {
       case "TaskCreated":
         const taskCreatedEvent = event.data as TaskCreated;
         await client.query(
-          `INSERT INTO tasks (id, name, revision, deleted, created_at, updated_at)
-           VALUES ($1, $2, $3, false, $4, $5)
+          `INSERT INTO tasks (id, name, revision, deleted, created_at, updated_at, deadline)
+           VALUES ($1, $2, $3, false, $4, $5, $6)
            ON CONFLICT (id) DO NOTHING`,
-          [event.streamId, taskCreatedEvent.name, event.revision, event.created, event.created]
+          [event.streamId, taskCreatedEvent.name, event.revision, event.created, event.created, taskCreatedEvent.deadline]
         );
         break;
 
@@ -76,9 +78,9 @@ async function handleEvent(event: RecordedEvent<EventType>) {
         const taskUpdatedEvent = event.data as TaskUpdated;
         await client.query(
           `UPDATE tasks
-             SET name = $1, revision = $2, updated_at = $3
-           WHERE id = $4`,
-          [taskUpdatedEvent.name, event.revision, event.created, event.streamId]
+             SET name = $1, revision = $2, updated_at = $3, deadline: $4
+           WHERE id = $5`,
+          [taskUpdatedEvent.name, event.revision, event.created, taskUpdatedEvent.deadline, event.streamId]
         );
         break;
 
@@ -102,6 +104,3 @@ async function handleEvent(event: RecordedEvent<EventType>) {
 }
 
 startProjector();
-
-
-

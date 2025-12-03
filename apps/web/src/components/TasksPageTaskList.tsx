@@ -5,15 +5,104 @@ import "./TasksPageTaskList.css";
 export function TasksPageTaskList() {
   const [tasks, setTasks] = useState<TaskResource[]>([]);
 
+  const compareTaskResourceExpiration = (t1: TaskResource, t2: TaskResource): number => {
+    if (!t1.deadline) {
+      if (!t2.deadline) {
+        return t1.created_at.getTime() - t2.created_at.getTime();
+      }
+      return 1;
+    }
+    if (!t2.deadline) {
+      return -1;
+    }
+    return t1.deadline.getTime() - t2.deadline.getTime();
+  };
+
+  const host = window.location.hostname;
+
   useEffect(() => {
-    fetch("http://localhost:3000/api/task")
+    console.log(host);
+    fetch(`http://${host}:3000/api/task`)
       .then((res) => res.json())
-      .then((tasksRes) => setTasks(tasksRes.tasks));
+      .then((tasksRes: { tasks: TaskResource[] }) => tasksRes.tasks.map(task => {
+        task.deadline = task.deadline ? new Date(task.deadline) : undefined;
+        task.created_at = new Date(task.created_at);
+        task.updated_at = new Date(task.updated_at);
+        return task;
+      }))
+      .then((tasks: TaskResource[]) => setTasks(tasks.sort(compareTaskResourceExpiration))); // TODO: Change this when deadlines are introduced
   }, []);
+
+  const deadlineToTimeLeft = (deadline: Date) => {
+    const to = new Date();
+    const ms = deadline.getTime() - to.getTime();
+    const abs = Math.abs(ms);
+
+    const minutes = Math.floor(abs / (1000 * 60));
+    const hours   = Math.floor(abs / (1000 * 60 * 60));
+    const days    = Math.floor(abs / (1000 * 60 * 60 * 24));
+
+    let result: string;
+
+    if (minutes < 60) result = `${minutes} minutes`;
+    else if (hours < 24) result = `${hours} hours`;
+    else result = `${days} days`;
+
+    return ms >= 0 ? `${result} left` : `${result} ago`;
+  }
+
+  const createdAtToSimpleDate = (createdAt: Date): string => {
+    const now = new Date();
+    if (createdAt.getFullYear() === now.getFullYear()) {
+      return `${createdAt.getMonth()}/${createdAt.getDay()}`
+    }
+    return `${createdAt.getMonth()}/${createdAt.getDay()}/${createdAt.getFullYear()}`
+  }
+
+  const getSeverityLevel = (task: TaskResource): string => {
+    if (!task.deadline) {
+      return '';
+    }
+
+    const now = new Date();
+    if (task.deadline.getTime() <= now.getTime() + (1000*60*60*24*7)) {
+      return 'severe';
+    }
+
+    if (task.deadline.getTime() <= now.getTime() + (1000*60*60*24*30)) {
+      return 'warning';
+    }
+
+    return 'ok';
+
+  }
+
+  const getCommonDateString = (date: Date): string => {
+    return `${date.getMonth()}/${date.getDate()}/${date.getFullYear()}`;
+  }
+
+  const markDoneClicked = (_id: string): void => {
+    console.log('Marked as done');
+  };
+
+  const deleteClicked = (id: string): void => {
+    fetch(`http://${host}:3000/api/task/${id}`, {
+      method: 'DELETE'
+    })
+    .then(res => {
+        if (res.ok && res.status === 202) {
+          setTasks(prev => prev.filter(task => task.id !== id));
+        } else {
+          console.error(`Failed to delete task with id [${id}]. Response code [${res.status}]`);
+        }
+    });
+  };
 
   return (
     <div className="TasksPageTaskList">
-      <h1>TasksList</h1>
+      <div className="header">
+        <button className="add-new">+</button>
+      </div>
       <ul>
         {tasks.map((task) =>
           task.deleted ? (
@@ -21,15 +110,31 @@ export function TasksPageTaskList() {
           ) : (
             <li key={task.id}>
               <details>
-                <summary>{task.name}</summary>
+                <summary>
+                  <div className="name">{task.name}</div>
+                  <div className={ `timeline ${getSeverityLevel(task)}` }>
+                    {task.deadline ? deadlineToTimeLeft(task.deadline) : ''}
+                    {task.deadline ? '' : `Created: ${createdAtToSimpleDate(task.created_at)}`}
+                  </div>
+                </summary>
                 <div className="body">
+                  <div className="actions">
+                    <button className="mark-done" onClick={() => markDoneClicked(task.id)}>Mark Done</button>
+                    <button className="delete" onClick={() => deleteClicked(task.id)}>Delete</button>
+                  </div>
+                  { task.deadline ? 
+                    <div>
+                      <label>Deadline:</label>
+                      <div>{getCommonDateString(task.deadline)}</div>
+                    </div>
+                    : '' }
                   <div>
                     <label>Created At:</label>
-                    <div>{task.created_at.toString()}</div>
+                    <div>{getCommonDateString(task.created_at)}</div>
                   </div>
                   <div>
                     <label>Updated At:</label>
-                    <div>{task.updated_at.toString()}</div>
+                    <div>{getCommonDateString(task.updated_at)}</div>
                   </div>
                   <div>
                     <label>Revision:</label>

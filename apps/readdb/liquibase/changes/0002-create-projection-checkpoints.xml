@@ -2,23 +2,21 @@
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="
-           http://www.liquibase.org/xml/ns/dbchangelog
-           http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-        <changeSet id="0003-create-projection-checkpoints" author="ryan">
-            <createTable tableName="projection_checkpoint">
-                <column name="id" type="text">
-                    <constraints primaryKey="true"/>
-                </column>
-                <column name="position" type="bigint">
-                    <constraints nullable="false"/>
-                </column>
-                <column name="updated_at_utc" type="timestamptz"
-                        defaultValueComputed="CURRENT_TIMESTAMP">
-                    <constraints nullable="false"/>
-                </column>
-            </createTable>
+        <changeSet id="0002-create-projection-checkpoints" author="ryan">
+                <createTable tableName="projection_checkpoint">
+                        <column name="id" type="text">
+                                <constraints primaryKey="true" />
+                        </column>
+                        <column name="position" type="bigint">
+                                <constraints nullable="false" />
+                        </column>
+                        <column name="updated_at_utc" type="timestamptz"
+                                defaultValueComputed="CURRENT_TIMESTAMP">
+                                <constraints nullable="false" />
+                        </column>
+                </createTable>
         </changeSet>
 
 </databaseChangeLog>

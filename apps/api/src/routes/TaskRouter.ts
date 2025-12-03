@@ -12,9 +12,6 @@ import {
 import {
   jsonEvent,
   WrongExpectedVersionError,
-  START,
-  ResolvedEvent,
-  EventType,
 } from "@kurrent/kurrentdb-client";
 import { Pool } from "pg";
 
@@ -58,6 +55,7 @@ router.get("/", async (_req, res) => {
 
 const createTaskRequestSchema = z.object({
   name: z.string(),
+  deadline: z.coerce.date().optional()
 });
 type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
 
@@ -75,6 +73,7 @@ router.post("/", async (req, res) => {
 
   const taskCreated: TaskCreated = {
     name: createTaskRequest.name,
+    deadline: createTaskRequest.deadline
   };
 
   const event = jsonEvent({
@@ -95,97 +94,6 @@ router.post("/", async (req, res) => {
     }
     console.error("Failed to append TaskCreated event", err);
     return res.sendStatus(500);
-  }
-});
-
-type TaskProjection = {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  revision: bigint;
-  deleted: boolean;
-};
-async function createProjectionsFromEvents(
-  events: AsyncIterableIterator<ResolvedEvent<EventType>>,
-): Promise<Map<string, TaskProjection>> {
-  const taskMap = new Map<string, TaskProjection>();
-  for await (const r of events) {
-    if (!r.event) continue;
-    const streamId = r.event.streamId;
-    if (r.event.type === taskCreatedEvent) {
-      const data = r.event.data as TaskCreated;
-      taskMap.set(streamId, {
-        id: streamId,
-        ...data,
-        revision: r.event.revision,
-        deleted: false,
-        createdAt: r.event.created,
-        updatedAt: r.event.created,
-      });
-    }
-    if (r.event.type === taskUpdatedEvent) {
-      const data = r.event.data as TaskUpdated;
-      if (!taskMap.has(streamId)) {
-        throw new Error(
-          `Task with id: ${streamId} was updated before it was created`,
-        );
-      }
-      const oldTask = taskMap.get(streamId);
-      if (!oldTask) {
-        throw new Error(`Can not update a non-existing task`);
-      }
-      taskMap.set(streamId, {
-        ...oldTask,
-        ...data,
-        revision: r.event.revision,
-        updatedAt: r.event.created,
-      });
-    }
-    if (r.event.type === taskDeletedEvent) {
-      if (!taskMap.has(streamId)) {
-        throw new Error(
-          `Task with id: ${streamId} was deleted before it was created`,
-        );
-      }
-      const oldTask = taskMap.get(streamId);
-      if (!oldTask) {
-        continue;
-      }
-      oldTask.deleted = true;
-    }
-  }
-  return taskMap;
-}
-
-// ---------- Get Task By Id -------
-
-router.get("/:id", async (req, res) => {
-  const id = req.params.id;
-  const projectionMap = await createProjectionsFromEvents(
-    kdb.readStream(id, { fromRevision: START }),
-  );
-  const projection = projectionMap.get(id);
-  if (!projection) {
-    res.sendStatus(404);
-    return;
-  }
-
-  res.json(projection);
-});
-
-// ---------- Get All Tasks --------
-// TODO: Replace with projection as this doesn't scale
-
-router.get("/", async (_req, res) => {
-  const stream = "$ce-Task";
-  try {
-    const taskMap = await createProjectionsFromEvents(
-      kdb.readStream(stream, { fromRevision: START }),
-    );
-    res.json(taskMap.values());
-  } catch (err) {
-    res.sendStatus(500);
   }
 });
 

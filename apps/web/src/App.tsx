@@ -7,6 +7,7 @@ function App() {
     isActive ? { textDecoration: "underline" } : undefined;
 
   const [ isExpanded, setExpanded ] = useState(true);
+  const navOn = false;
 
   const expandCollapseClicked = () => {
     setExpanded(!isExpanded);
@@ -14,18 +15,23 @@ function App() {
 
   return <div className="App">
     <nav>
-      <div className="nav-header">
-        <div className="expander" onClick={expandCollapseClicked}>
-          { isExpanded ? '<' : '>' }
-        </div>
-        <div className="user-view">
-          UserView
-        </div>
-      </div>
-      <NavLink to="/" style={active} end>{ isExpanded ? 'Home' : 'H' }</NavLink>
-      <NavLink to='/tasks' style={active}>{ isExpanded ? 'Tasks' : 'T' }</NavLink>
+      { navOn ? 
+        <>
+          <div className="nav-header">
+            <div className="expander" onClick={expandCollapseClicked}>
+              { isExpanded ? '<' : '>' }
+            </div>
+            <div className="user-view">
+              UserView
+            </div>
+          </div>
+          <NavLink to="/" style={active} end>{ isExpanded ? 'Home' : 'H' }</NavLink>
+          <NavLink to='/tasks' style={active}>{ isExpanded ? 'Tasks' : 'T' }</NavLink>
+        </> : '' }
     </nav>
-    <Outlet />
+    <div className="main">
+      <Outlet />
+    </div>
   </div>;
 }
 

@@ -6,7 +6,8 @@
            http://www.liquibase.org/xml/ns/dbchangelog
            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-    <include file="changes/0001-create-task-table.xml" relativeToChangelogFile="true"/>
+    <include file="changes/0001-create-tasks-table.xml" relativeToChangelogFile="true"/>
     <include file="changes/0002-create-projection-checkpoints.xml" relativeToChangelogFile="true"/>
+    <include file="changes/0003-add-deadline-to-tasks.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
 
