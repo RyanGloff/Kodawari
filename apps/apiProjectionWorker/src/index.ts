@@ -55,6 +55,9 @@ type TaskUpdated = {
   name: string;
   deadline?: Date;
 };
+type TaskCompleted = {
+  completedAt: Date;
+};
 
 async function handleEvent(event: RecordedEvent<EventType>) {
   const client = await pg.connect();
@@ -80,7 +83,23 @@ async function handleEvent(event: RecordedEvent<EventType>) {
           `UPDATE tasks
              SET name = $1, revision = $2, updated_at = $3, deadline: $4
            WHERE id = $5`,
-          [taskUpdatedEvent.name, event.revision, event.created, taskUpdatedEvent.deadline, event.streamId]
+          [
+            taskUpdatedEvent.name,
+            event.revision,
+            event.created,
+            taskUpdatedEvent.deadline,
+            event.streamId
+          ]
+        );
+        break;
+
+      case "TaskCompleted":
+        const taskCompletedEvent = event.data as TaskCompleted;
+        await client.query(
+          `UPDATE tasks
+             SET completed_at = $1
+           WHERE id = $2`,
+          [taskCompletedEvent.completedAt, event.streamId]
         );
         break;
 

@@ -24,4 +24,17 @@ export const taskDeletedEvent = "TaskDeleted";
 export type TaskDeleted = {};
 export const taskDeletedSchema = z.object({});
 
-export const events = [taskCreatedEvent, taskUpdatedEvent, taskDeletedEvent];
+export const taskCompletedEvent = "TaskCompleted";
+export type TaskCompleted = {
+  completedAt: Date
+};
+export const taskCompletedSchema = z.object({
+  completedAt: z.coerce.date()
+});
+
+export const events = [
+  taskCreatedEvent,
+  taskUpdatedEvent,
+  taskDeletedEvent,
+  taskCompletedEvent
+];

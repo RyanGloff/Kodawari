@@ -3,6 +3,8 @@ import { Router } from "express";
 import { kdb } from "../kurrent.js";
 import z from "zod";
 import {
+    TaskCompleted,
+  taskCompletedEvent,
   TaskCreated,
   taskCreatedEvent,
   taskDeletedEvent,
@@ -93,6 +95,62 @@ router.post("/", async (req, res) => {
       return;
     }
     console.error("Failed to append TaskCreated event", err);
+    return res.sendStatus(500);
+  }
+});
+
+// ---------- Mark Task Complete ---
+const markTaskCompletedRequestSchema = z.object({
+  expectedRevision: z.coerce.bigint(),
+  completedAt: z.coerce.date().optional()
+});
+type MarkTaskCompletedRequest = z.infer<typeof markTaskCompletedRequestSchema>;
+
+router.post("/:id/complete", async (req, res) => {
+  const id = req.params.id;
+
+  const parseResult = markTaskCompletedRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid request body",
+      details: parseResult.error.format(),
+    });
+  }
+
+  const { completedAt, expectedRevision }: MarkTaskCompletedRequest = parseResult.data;
+
+  const taskCompleted: TaskCompleted = {
+    completedAt: completedAt ?? new Date()
+  };
+
+  const event = jsonEvent({
+    type: taskCompletedEvent,
+    data: taskCompleted,
+  });
+
+  try {
+    const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
+      streamState: BigInt(expectedRevision)
+    });
+    return res.status(202).json({
+      id,
+      status: "task-completed",
+      nextExpectedRevision: `${nextExpectedRevision}`
+    });
+  } catch (err) {
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.actualState === "no_stream"
+    ) {
+      res.sendStatus(404);
+      return;
+    }
+
+    if (err instanceof WrongExpectedVersionError && err.type === "wrong-expected-version") {
+      res.sendStatus(412);
+      return;
+    }
+    console.error("Failed to append TaskCompleted event", err);
     return res.sendStatus(500);
   }
 });

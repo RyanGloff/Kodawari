@@ -9,5 +9,6 @@
     <include file="changes/0001-create-tasks-table.xml" relativeToChangelogFile="true"/>
     <include file="changes/0002-create-projection-checkpoints.xml" relativeToChangelogFile="true"/>
     <include file="changes/0003-add-deadline-to-tasks.xml" relativeToChangelogFile="true"/>
+    <include file="changes/0004-add-completed_at-to-tasks.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
 
