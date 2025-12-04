@@ -3,7 +3,7 @@ body {
   height: 100vh;
   background: var(--bg-darkest);
   color: var(--text-lightest);
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
 }

@@ -245,14 +245,6 @@ export function TasksPageTaskList() {
                     <label>Created At:</label>
                     <div>{getCommonDateString(task.created_at)}</div>
                   </div>
-                  <div>
-                    <label>Updated At:</label>
-                    <div>{getCommonDateString(task.updated_at)}</div>
-                  </div>
-                  <div>
-                    <label>Revision:</label>
-                    <div>{task.revision}</div>
-                  </div>
                 </div>
               </details>
             </li>
