@@ -3,6 +3,8 @@ import type { TaskResource } from "../model";
 import "./TasksPageTaskList.css";
 
 export function TasksPageTaskList() {
+  const host = window.location.hostname;
+
   const [tasks, setTasks] = useState<TaskResource[]>([]);
 
   const compareTaskResourceExpiration = (
@@ -21,8 +23,6 @@ export function TasksPageTaskList() {
     return t1.deadline.getTime() - t2.deadline.getTime();
   };
 
-  const host = window.location.hostname;
-
   useEffect(() => {
     fetch(`http://${host}:3000/api/task`)
       .then((res) => res.json())
@@ -35,8 +35,8 @@ export function TasksPageTaskList() {
         }),
       )
       .then((tasks: TaskResource[]) =>
-        setTasks(tasks.sort(compareTaskResourceExpiration)),
-      ); // TODO: Change this when deadlines are introduced
+        setTasks(tasks.sort(compareTaskResourceExpiration))
+      );
   }, []);
 
   const deadlineToTimeLeft = (deadline: Date) => {
@@ -99,15 +99,63 @@ export function TasksPageTaskList() {
       body: JSON.stringify({
         expectedRevision,
       }),
-    }).then((res) => {
-      if (res.ok && res.status === 202) {
+    })
+      .then((res) => {
+        if (res.ok && res.status === 202) {
+          return res.json();
+        }
+        throw new Error(`Failed to mark task complete`);
+      })
+      .then((response) => {
         setTasks((prev) =>
           prev.map((task) =>
-            task.id === id ? { ...task, completed_at: new Date() } : task,
+            task.id === id
+              ? {
+                  ...task,
+                  completed_at: new Date(),
+                  revision: response.nextExpectedRevision,
+                }
+              : task,
           ),
         );
-      }
-    });
+      })
+      .catch((e) => {
+        console.error(e);
+      });
+  };
+
+  const reopenClicked = (id: string, expectedRevision: bigint): void => {
+    fetch(`http://${host}:3000/api/task/${id}/reopen`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        expectedRevision,
+      }),
+    })
+      .then((res) => {
+        if (res.ok && res.status === 202) {
+          return res.json();
+        }
+        throw new Error(`Failed to reopen task`);
+      })
+      .then((response) => {
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === id
+              ? {
+                  ...task,
+                  completed_at: undefined,
+                  revision: response.nextExpectedRevision,
+                }
+              : task,
+          ),
+        );
+      })
+      .catch((e) => {
+        console.error(e);
+      });
   };
 
   const deleteClicked = (id: string): void => {
@@ -158,6 +206,16 @@ export function TasksPageTaskList() {
                         onClick={() => markDoneClicked(task.id, task.revision)}
                       >
                         Mark Done
+                      </button>
+                    )}
+                    {!task.completed_at ? (
+                      ""
+                    ) : (
+                      <button
+                        className="reopen"
+                        onClick={() => reopenClicked(task.id, task.revision)}
+                      >
+                        Reopen
                       </button>
                     )}
                     <button

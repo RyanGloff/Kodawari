@@ -8,6 +8,8 @@ import {
   TaskCreated,
   taskCreatedEvent,
   taskDeletedEvent,
+  TaskReopened,
+  taskReopenedEvent,
   TaskUpdated,
   taskUpdatedEvent,
 } from "../events.js";
@@ -46,9 +48,24 @@ router.get("/:id", async (req, res) => {
 });
 
 // ---------- Get All Tasks --------
-router.get("/", async (_req, res) => {
+const getAllOptionsSchema = z.object({
+  includeDeleted: z.boolean().optional()
+});
+type GetAllOptions = z.infer<typeof getAllOptionsSchema>;
+
+router.get("/", async (req, res) => {
+  const parseResult = getAllOptionsSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid request body",
+      details: parseResult.error.format()
+    });
+  }
+  const getAllOptions: GetAllOptions = parseResult.data;
   // TODO: Change this to something less insane
-  const taskProjectionRes = await pg.query(`SELECT * FROM public.tasks;`);
+  const sql = `SELECT * FROM public.tasks ${getAllOptions.includeDeleted ? '' : 'WHERE deleted = false'}`;
+  const taskProjectionRes = await pg.query(sql);
+  console.log(JSON.stringify(taskProjectionRes));
 
   res.json({ tasks: taskProjectionRes.rows });
 });
@@ -151,6 +168,62 @@ router.post("/:id/complete", async (req, res) => {
       return;
     }
     console.error("Failed to append TaskCompleted event", err);
+    return res.sendStatus(500);
+  }
+});
+
+// ---------- Reopen Task -------
+const reopenTaskRequestSchema = z.object({
+  reopenedAt: z.coerce.date().optional(),
+  expectedRevision: z.coerce.bigint()
+});
+type ReopenTaskRequest = z.infer<typeof reopenTaskRequestSchema>;
+
+router.post("/:id/reopen", async (req, res) => {
+  const id = req.params.id;
+
+  const parseResult = reopenTaskRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid request body",
+      details: parseResult.error.format(),
+    });
+  }
+
+  const { reopenedAt, expectedRevision }: ReopenTaskRequest = parseResult.data;
+
+  const taskReopened: TaskReopened = {
+    reopenedAt: reopenedAt ?? new Date()
+  };
+
+  const event = jsonEvent({
+    type: taskReopenedEvent,
+    data: taskReopened,
+  });
+
+  try {
+    const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
+      streamState: BigInt(expectedRevision)
+    });
+    return res.status(202).json({
+      id,
+      status: "task-reopened",
+      nextExpectedRevision: `${nextExpectedRevision}`
+    });
+  } catch (err) {
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.actualState === "no_stream"
+    ) {
+      res.sendStatus(404);
+      return;
+    }
+
+    if (err instanceof WrongExpectedVersionError && err.type === "wrong-expected-version") {
+      res.sendStatus(412);
+      return;
+    }
+    console.error("Failed to append TaskReopened event", err);
     return res.sendStatus(500);
   }
 });

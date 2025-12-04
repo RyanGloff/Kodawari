@@ -32,9 +32,18 @@ export const taskCompletedSchema = z.object({
   completedAt: z.coerce.date()
 });
 
+export const taskReopenedEvent = "TaskReopened";
+export type TaskReopened = {
+  reopenedAt: Date
+};
+export const taskReopenedSchema = z.object({
+  reopenedAt: z.coerce.date()
+});
+
 export const events = [
   taskCreatedEvent,
   taskUpdatedEvent,
   taskDeletedEvent,
-  taskCompletedEvent
+  taskCompletedEvent,
+  taskReopenedEvent
 ];
