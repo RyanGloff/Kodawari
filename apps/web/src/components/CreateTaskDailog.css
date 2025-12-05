@@ -1,0 +1,85 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.dialog-panel {
+  background: hsl(0, 0%, 14%);
+  padding: 20px;
+  border-radius: 12px;
+  width: 320px;
+  color: white;
+  border: 1px solid hsl(0, 0%, 25%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialog-panel input[type="text"],
+.dialog-panel input[type="date"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: none;
+  background: var(--bg-light);
+  color: white;
+  font: inherit;
+  margin: 0;
+}
+
+.dialog-panel > * {
+  flex: 1;
+  align-items: center;
+  gap: 1rem;
+  display: block;
+  padding: 0.75rem;
+  border-radius: 1rem;
+}
+
+input[type="text"],
+input[type="date"] {
+  margin: 1rem 0;
+  background: var(--bg-light);
+}
+input[type="text"]::placeholder,
+input[type="text"],
+input[type="date"] {
+  text-align: center;
+}
+
+input[name="deadline"] {
+  overflow: hidden;
+  max-height: 10rem;
+  opacity: 1;
+  transition:
+    max-height 0.4s ease,
+    opacity 0.4s ease,
+    margin 0.4s ease
+}
+
+button {
+  all: unset;
+  background: var(--submit-green);
+  color: var(--submit-text-clr);
+  font-weight: 600;
+}
+
+.submit {
+  background: var(--submit-green);
+  color: var(--submit-text-clr);
+}
+
+.cancel {
+  background: var(--delete-red);
+  color: var(--delete-text-clr);
+}
+

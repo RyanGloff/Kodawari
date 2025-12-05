@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import type { TaskResource } from "../model";
 import "./TasksPageTaskList.css";
+import { CreateTaskDialog } from "./CreateTaskDialog";
 
 export function TasksPageTaskList() {
   const host = window.location.hostname;
 
   const [tasks, setTasks] = useState<TaskResource[]>([]);
+
+  const [ createDialogIsOpen, setCreateDialogIsOpen ] = useState<boolean>(false);
 
   const compareTaskResourceExpiration = (
     t1: TaskResource,
@@ -118,6 +121,10 @@ export function TasksPageTaskList() {
               : task,
           ),
         );
+        const detailsEle = document.getElementById(`TaskDetailsElement-${id}`) as HTMLDetailsElement | null;
+        if (detailsEle) {
+          detailsEle.open = false;
+        }
       })
       .catch((e) => {
         console.error(e);
@@ -174,16 +181,17 @@ export function TasksPageTaskList() {
 
   return (
     <div className="TasksPageTaskList">
-      <div className="header">
-        <button className="add-new">+</button>
-      </div>
+      <button className="add-new" onClick={() => setCreateDialogIsOpen(true)}>+</button>
+      <CreateTaskDialog
+        open={createDialogIsOpen}
+        onClose={() => setCreateDialogIsOpen(false)}/>
       <ul>
         {tasks.map((task) =>
           task.deleted ? (
             ""
           ) : (
             <li key={task.id}>
-              <details>
+              <details id={`TaskDetailsElement-${task.id}`}>
                 <summary>
                   <div className="name">{task.name}</div>
                   <div className={`timeline ${getSeverityLevel(task)}`}>

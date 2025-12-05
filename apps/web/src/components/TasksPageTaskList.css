@@ -1,3 +1,28 @@
+.add-new {
+  all: unset;
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  aspect-ratio: 1;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  font-size: 3rem;
+  background: var(--bg-dark);
+  margin: 0.5rem 1rem;
+  padding: 0.5rem;
+  border-radius: 1rem;
+}
+.add-new:hover {
+  background: var(--bg);
+}
+.add-new:active {
+  background: var(--bg-darkest);
+}
+
 ul {
   all: unset;
   list-style-type: none;
@@ -11,7 +36,6 @@ details {
   all: unset;
   display: block;
   background: #333;
-  border-bottom: 1px solid #444;
   margin: 0.5rem 1rem;
   padding: 1rem;
   border-radius: 1rem;

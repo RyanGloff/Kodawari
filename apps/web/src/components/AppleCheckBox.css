@@ -1,0 +1,50 @@
+input[type="checkbox"].apple {
+  all: unset;
+  --border-radius: 9999px;
+  --height: 1em;
+  --width: calc(var(--height) * 2);
+  --thumb-margin: 3px;
+  --thumb-size: calc(var(--height) - (2 * var(--thumb-margin)));
+  --active-background: var(--clr-cherry);
+  display: inline-block;
+  position: relative;
+  height: var(--height);
+  width: var(--width);
+}
+
+/* background */
+input[type="checkbox"].apple::before {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: var(--width);
+  height: var(--height);
+  background: var(--bg-light);
+  border-radius: var(--border-radius);
+  transition: background 0.5s;
+}
+input[type="checkbox"].apple:checked::before {
+  background: var(--active-background);
+  transition: background 0.5s;
+}
+
+/* thumb */
+input[type="checkbox"].apple::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  bottom: var(--thumb-margin);
+  left: var(--thumb-margin);
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  background: var(--bg-dark);
+  border-radius: var(--border-radius);
+  transition: left 0.5s;
+}
+input[type="checkbox"].apple:checked::after {
+  left: calc(var(--width) - var(--thumb-margin) - var(--thumb-size));
+  transition: left 0.5s;
+}
+

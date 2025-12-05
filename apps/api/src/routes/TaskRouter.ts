@@ -74,7 +74,7 @@ router.get("/", async (req, res) => {
 
 const createTaskRequestSchema = z.object({
   name: z.string(),
-  deadline: z.coerce.date().optional()
+  deadline: z.coerce.date().nullable().optional()
 });
 type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
 
@@ -92,7 +92,7 @@ router.post("/", async (req, res) => {
 
   const taskCreated: TaskCreated = {
     name: createTaskRequest.name,
-    deadline: createTaskRequest.deadline
+    deadline: createTaskRequest.deadline === null ? undefined : createTaskRequest.deadline
   };
 
   const event = jsonEvent({
