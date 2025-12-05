@@ -2,6 +2,7 @@ import ReactDOM from "react-dom";
 
 import "./CreateTaskDailog.css";
 import { useState } from "react";
+import { createTask } from "../api/TaskApiClient";
 
 type CreateTaskDialogProps = {
   open: boolean;
@@ -13,7 +14,6 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
   const [deadline, setDeadline] = useState<Date | null>(null);
 
   if (!open) return null;
-  const host = window.location.hostname;
 
   const clearValues = () => {
     setName("");
@@ -26,18 +26,8 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
       deadline
     };
 
-    fetch(`http://${host}:3000/api/task`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(req),
-    }).then(async (res) => {
-      if (!(res.ok && res.status === 201)) {
-        throw new Error(`Failed to create task: ${await res.json()}`);
-      }
-      return res.json();
-    }).then(res => {
+    createTask(req)
+    .then(res => {
       console.log(`success: ${JSON.stringify(res)}`);
     });
 

@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import type { TaskResource } from "../model";
 import "./TasksPageTaskList.css";
 import { CreateTaskDialog } from "./CreateTaskDialog";
+import { deleteTask, getTasks, markTaskComplete, reopenTask, type MarkTaskCompleteResponse } from "../api/TaskApiClient";
 
 export function TasksPageTaskList() {
-  const host = window.location.hostname;
-
   const [tasks, setTasks] = useState<TaskResource[]>([]);
 
   const [ createDialogIsOpen, setCreateDialogIsOpen ] = useState<boolean>(false);
@@ -27,19 +26,10 @@ export function TasksPageTaskList() {
   };
 
   useEffect(() => {
-    fetch(`http://${host}:3000/api/task`)
-      .then((res) => res.json())
-      .then((tasksRes: { tasks: TaskResource[] }) =>
-        tasksRes.tasks.map((task) => {
-          task.deadline = task.deadline ? new Date(task.deadline) : undefined;
-          task.created_at = new Date(task.created_at);
-          task.updated_at = new Date(task.updated_at);
-          return task;
-        }),
-      )
-      .then((tasks: TaskResource[]) =>
-        setTasks(tasks.sort(compareTaskResourceExpiration))
-      );
+    getTasks()
+    .then((tasks: TaskResource[]) =>
+      setTasks(tasks.sort(compareTaskResourceExpiration))
+    );
   }, []);
 
   const deadlineToTimeLeft = (deadline: Date) => {
@@ -94,88 +84,53 @@ export function TasksPageTaskList() {
   };
 
   const markDoneClicked = (id: string, expectedRevision: bigint): void => {
-    fetch(`http://${host}:3000/api/task/${id}/complete`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        expectedRevision,
-      }),
+    markTaskComplete(id, expectedRevision)
+    .then((response: MarkTaskCompleteResponse) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                completed_at: new Date(),
+                revision: response.nextExpectedRevision,
+              }
+            : task,
+        ),
+      );
+      const detailsEle = document.getElementById(`TaskDetailsElement-${id}`) as HTMLDetailsElement | null;
+      if (detailsEle) {
+        detailsEle.open = false;
+      }
     })
-      .then((res) => {
-        if (res.ok && res.status === 202) {
-          return res.json();
-        }
-        throw new Error(`Failed to mark task complete`);
-      })
-      .then((response) => {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  completed_at: new Date(),
-                  revision: response.nextExpectedRevision,
-                }
-              : task,
-          ),
-        );
-        const detailsEle = document.getElementById(`TaskDetailsElement-${id}`) as HTMLDetailsElement | null;
-        if (detailsEle) {
-          detailsEle.open = false;
-        }
-      })
-      .catch((e) => {
-        console.error(e);
-      });
+    .catch((e) => {
+      console.error(e);
+    });
   };
 
   const reopenClicked = (id: string, expectedRevision: bigint): void => {
-    fetch(`http://${host}:3000/api/task/${id}/reopen`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        expectedRevision,
-      }),
+    reopenTask(id, expectedRevision)
+    .then((response) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                completed_at: undefined,
+                revision: response.nextExpectedRevision,
+              }
+            : task,
+        ),
+      );
     })
-      .then((res) => {
-        if (res.ok && res.status === 202) {
-          return res.json();
-        }
-        throw new Error(`Failed to reopen task`);
-      })
-      .then((response) => {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  completed_at: undefined,
-                  revision: response.nextExpectedRevision,
-                }
-              : task,
-          ),
-        );
-      })
-      .catch((e) => {
-        console.error(e);
-      });
+    .catch((e) => {
+      console.error(e);
+    });
   };
 
   const deleteClicked = (id: string): void => {
-    fetch(`http://${host}:3000/api/task/${id}`, {
-      method: "DELETE",
-    }).then((res) => {
-      if (res.ok && res.status === 202) {
-        setTasks((prev) => prev.filter((task) => task.id !== id));
-      } else {
-        console.error(
-          `Failed to delete task with id [${id}]. Response code [${res.status}]`,
-        );
-      }
+    deleteTask(id)
+    .then(() => {
+        setTasks(prev => prev.filter(task => task.id !== id));
     });
   };
 
