@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import "./CreateTaskDailog.css";
 import { useState } from "react";
 import { createTask } from "../api/TaskApiClient";
+import { useToast } from "./toast/ToastContext";
 
 type CreateTaskDialogProps = {
   open: boolean;
@@ -10,6 +11,8 @@ type CreateTaskDialogProps = {
 };
 
 export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
+  const { addToast } = useToast();
+
   const [name, setName] = useState<string>("");
   const [deadline, setDeadline] = useState<Date | null>(null);
 
@@ -28,7 +31,12 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
 
     createTask(req)
     .then(res => {
+      addToast("Task created", "success");
       console.log(`success: ${JSON.stringify(res)}`);
+    })
+    .catch(e => {
+      addToast("Failed to create task", "error");
+      console.error(e);
     });
 
     clearValues();

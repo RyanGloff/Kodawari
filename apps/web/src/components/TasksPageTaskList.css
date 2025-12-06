@@ -37,13 +37,14 @@ details {
   display: block;
   background: #333;
   margin: 0.5rem 1rem;
-  padding: 1rem;
   border-radius: 1rem;
+  padding: 1rem;
 }
 
 .body {
   margin-top: 1rem;
 }
+
 .body > div > div {
   margin-left: 1ch;
 }
