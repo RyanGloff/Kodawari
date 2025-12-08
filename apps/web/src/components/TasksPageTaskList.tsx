@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./TasksPageTaskList.css";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 import {
@@ -6,29 +6,41 @@ import {
   getTasks,
   markTaskComplete,
   reopenTask,
-  type MarkTaskCompleteResponse,
-  type TaskResource,
 } from "../api/TaskApiClient";
 import {
   getCommonDateString,
   getRelativeTimeString,
   getSimpleDate,
 } from "../utils/DateUtils";
+import { useTaskStore, type TaskMap, type TaskStore } from "../state/TaskStore";
 import { useToast } from "./toast/ToastContext";
+import { useTaskEvents } from "../hooks/useTaskEvents";
+import type { ApiTaskResource } from "@model/TaskResource";
 
 export function TasksPageTaskList() {
-  const [tasks, setTasks] = useState<TaskResource[]>([]);
+  const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
+
+  const getTaskList = async (): Promise<ApiTaskResource[]> => {
+    const tasks = await getTasks();
+    tasks.sort(compareApiTaskResourceByExpiration);
+    hydrate(tasks);
+    return tasks;
+  };
+
+  useTaskEvents(getTaskList);
+
+  const taskMap: TaskMap = useTaskStore((s: TaskStore) => s.tasks);
   const [createDialogIsOpen, setCreateDialogIsOpen] = useState<boolean>(false);
 
   const { addToast } = useToast();
 
-  const compareTaskResourceByExpiration = (
-    t1: TaskResource,
-    t2: TaskResource,
+  const compareApiTaskResourceByExpiration = (
+    t1: ApiTaskResource,
+    t2: ApiTaskResource,
   ): number => {
     if (!t1.deadline) {
       if (!t2.deadline) {
-        return t1.created_at.getTime() - t2.created_at.getTime();
+        return t1.createdAt.getTime() - t2.createdAt.getTime();
       }
       return 1;
     }
@@ -38,21 +50,12 @@ export function TasksPageTaskList() {
     return t1.deadline.getTime() - t2.deadline.getTime();
   };
 
-  const loadTasks = async () => {
-    const tasks = await getTasks();
-    setTasks(tasks.sort(compareTaskResourceByExpiration));
-  };
-
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const getSeverityLevel = (task: TaskResource): string => {
+  const getSeverityLevel = (task: ApiTaskResource): string => {
     if (!task.deadline) {
       return "";
     }
 
-    if (task.completed_at) {
+    if (task.completedAt) {
       return "";
     }
 
@@ -68,51 +71,25 @@ export function TasksPageTaskList() {
     return "ok";
   };
 
-  const markDoneClicked = (id: string, expectedRevision: bigint): void => {
+  const markDoneClicked = (id: string, expectedRevision: number): void => {
     markTaskComplete(id, expectedRevision)
-      .then((response: MarkTaskCompleteResponse) => {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  completed_at: new Date(),
-                  revision: response.nextExpectedRevision,
-                }
-              : task,
-          ),
-        );
+      .then((_v: any) => {
         const detailsEle = document.getElementById(
           `TaskDetailsElement-${id}`,
         ) as HTMLDetailsElement | null;
         if (detailsEle) {
           detailsEle.open = false;
         }
-        addToast("Task marked as complete successfully", "success");
       })
-      .catch((e) => {
+      .catch((e: any) => {
         addToast("Failed to mark task complete", "error");
         console.error(e);
       });
   };
 
-  const reopenClicked = (id: string, expectedRevision: bigint): void => {
+  const reopenClicked = (id: string, expectedRevision: number): void => {
     reopenTask(id, expectedRevision)
-      .then((response) => {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  completed_at: undefined,
-                  revision: response.nextExpectedRevision,
-                }
-              : task,
-          ),
-        );
-        addToast("Task reopened successfully", "success");
-      })
-      .catch((e) => {
+      .catch((e: any) => {
         addToast("Failed to reopen task", "error");
         console.error(e);
       });
@@ -120,13 +97,9 @@ export function TasksPageTaskList() {
 
   const deleteClicked = (id: string): void => {
     deleteTask(id)
-      .then(() => {
-        setTasks((prev) => prev.filter((task) => task.id !== id));
-        addToast("Task deleted successfully", "success");
-      })
-      .catch((e) => {
+      .catch((e: any) => {
         addToast("Failed to delete task", "error");
-        console.log(e);
+        console.error(e);
       });
   };
 
@@ -140,8 +113,8 @@ export function TasksPageTaskList() {
         onClose={() => setCreateDialogIsOpen(false)}
       />
       <ul>
-        {tasks.map((task) =>
-          task.deleted ? (
+        {Object.values(taskMap).map((task: ApiTaskResource) =>
+          task.deletedAt ? (
             ""
           ) : (
             <li key={task.id}>
@@ -149,18 +122,18 @@ export function TasksPageTaskList() {
                 <summary>
                   <div className="name">{task.name}</div>
                   <div className={`timeline ${getSeverityLevel(task)}`}>
-                    {task.completed_at ? "COMPLETE" : ""}
-                    {!task.completed_at && task.deadline
+                    {task.completedAt ? "COMPLETE" : ""}
+                    {!task.completedAt && task.deadline
                       ? getRelativeTimeString(task.deadline)
                       : ""}
-                    {task.completed_at || task.deadline
+                    {task.completedAt || task.deadline
                       ? ""
-                      : `Created: ${getSimpleDate(task.created_at)}`}
+                      : `Created: ${getSimpleDate(task.createdAt)}`}
                   </div>
                 </summary>
                 <div className="body">
                   <div className="actions">
-                    {task.completed_at ? (
+                    {task.completedAt ? (
                       <button
                         className="reopen"
                         onClick={() => reopenClicked(task.id, task.revision)}
@@ -190,17 +163,21 @@ export function TasksPageTaskList() {
                   ) : (
                     "No Deadline Set"
                   )}
-                  {task.completed_at ? (
+                  {task.completedAt ? (
                     <div>
                       <label>Completed At:</label>
-                      <div>{getCommonDateString(task.created_at)}</div>
+                      <div>{getCommonDateString(task.createdAt)}</div>
                     </div>
                   ) : (
                     ""
                   )}
                   <div>
                     <label>Created At:</label>
-                    <div>{getCommonDateString(task.created_at)}</div>
+                    <div>{getCommonDateString(task.createdAt)}</div>
+                  </div>
+                  <div>
+                    <label>Revision:</label>
+                    <div>{task.revision}</div>
                   </div>
                 </div>
               </details>

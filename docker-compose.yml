@@ -57,7 +57,9 @@ services:
       update
 
   api-projection-worker:
-    build: ./apps/apiProjectionWorker
+    build:
+      context: .
+      dockerfile: ./apps/apiProjectionWorker/Dockerfile
     container_name: api-projection-worker
     environment:
       - KURRENTDB_CONNECTION_STRING=kurrentdb://kurrentdb:2113?tls=false
@@ -74,7 +76,9 @@ services:
         condition: service_healthy
 
   api:
-    build: ./apps/api
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: api
     environment:
       - PORT=3000
@@ -90,7 +94,9 @@ services:
       - "3000:3000"
 
   web:
-    build: ./apps/web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     container_name: web
     depends_on:
       - api

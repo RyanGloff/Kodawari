@@ -1,6 +1,7 @@
 import { EventType, RecordedEvent, START } from "@kurrent/kurrentdb-client/dist/index.js";
 import { kdb } from "./kurrent.js";
 import { Pool } from "pg";
+import { KurrentDBTaskCompleted, KurrentDBTaskCreated, KurrentDBTaskUpdated, TaskCompletedEvent, TaskCreatedEvent, TaskDeletedEvent, TaskReopenedEvent, TaskUpdatedEvent } from "@model/TaskResource.js";
 
 const pgHost = process.env.PG_HOST;
 const pgDatabase = process.env.PG_DATABASE
@@ -47,21 +48,6 @@ async function startProjector() {
   }
 }
 
-type TaskCreated = {
-  name: string;
-  deadline?: Date;
-};
-type TaskUpdated = {
-  name: string;
-  deadline?: Date;
-};
-type TaskCompleted = {
-  completedAt: Date;
-};
-type TaskReopened = {
-  reopenedAt: Date;
-};
-
 async function handleEvent(event: RecordedEvent<EventType>) {
   const client = await pg.connect();
 
@@ -70,18 +56,18 @@ async function handleEvent(event: RecordedEvent<EventType>) {
     await client.query("BEGIN");
 
     switch (event.type) {
-      case "TaskCreated":
-        const taskCreatedEvent = event.data as TaskCreated;
+      case TaskCreatedEvent:
+        const taskCreatedEvent = event.data as KurrentDBTaskCreated;
         await client.query(
-          `INSERT INTO tasks (id, name, revision, deleted, created_at, updated_at, deadline)
-           VALUES ($1, $2, $3, false, $4, $5, $6)
+          `INSERT INTO tasks (id, name, revision, deleted_at, created_at, updated_at, deadline)
+           VALUES ($1, $2, $3, NULL, $4, $5, $6)
            ON CONFLICT (id) DO NOTHING`,
           [event.streamId, taskCreatedEvent.name, event.revision, event.created, event.created, taskCreatedEvent.deadline]
         );
         break;
 
-      case "TaskUpdated":
-        const taskUpdatedEvent = event.data as TaskUpdated;
+      case TaskUpdatedEvent:
+        const taskUpdatedEvent = event.data as KurrentDBTaskUpdated;
         await client.query(
           `UPDATE tasks
              SET name = $1, revision = $2, updated_at = $3, deadline: $4
@@ -94,8 +80,8 @@ async function handleEvent(event: RecordedEvent<EventType>) {
         ]);
         break;
 
-      case "TaskCompleted":
-        const taskCompletedEvent = event.data as TaskCompleted;
+      case TaskCompletedEvent:
+        const taskCompletedEvent = event.data as KurrentDBTaskCompleted;
         await client.query(
           `UPDATE tasks
              SET completed_at = $1, revision= $2, updated_at = $3
@@ -104,7 +90,7 @@ async function handleEvent(event: RecordedEvent<EventType>) {
         );
         break;
 
-      case "TaskReopened":
+      case TaskReopenedEvent:
         await client.query(
           `UPDATE tasks
              SET completed_at = null, revision = $1, updated_at = $2
@@ -113,12 +99,12 @@ async function handleEvent(event: RecordedEvent<EventType>) {
         );
         break;
 
-      case "TaskDeleted":
+      case TaskDeletedEvent:
         await client.query(
           `UPDATE tasks
-             SET deleted = true, revision = $1, updated_at = $2
-           WHERE id = $3`,
-          [event.revision, event.created, event.streamId]
+             SET deleted_at = $1, revision = $2, updated_at = $3
+           WHERE id = $4`,
+          [event.created, event.revision, event.created, event.streamId]
         );
         break;
     }

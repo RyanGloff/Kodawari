@@ -1,9 +1,12 @@
 FROM node:20-alpine
 WORKDIR /app
-# copy manifest and install (no lock file needed)
-COPY package.json ./
+
+COPY . .
+
 RUN npm install
-COPY tsconfig.json ./
-COPY src ./src
+
+WORKDIR /app/apps/api
+
 EXPOSE 3000
 CMD ["npm","run","start"]
+

@@ -3,11 +3,10 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies first (cache layer)
-COPY package*.json ./
+COPY . .
 RUN npm install
 
-# Copy source
-COPY . .
+WORKDIR /app/apps/web
 
 # Vite wants host binding + custom port
 EXPOSE 8080

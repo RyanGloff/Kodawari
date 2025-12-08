@@ -3,21 +3,24 @@ import { Router } from "express";
 import { kdb } from "../kurrent.js";
 import z from "zod";
 import {
-    TaskCompleted,
-  taskCompletedEvent,
-  TaskCreated,
-  taskCreatedEvent,
-  taskDeletedEvent,
-  TaskReopened,
-  taskReopenedEvent,
-  TaskUpdated,
-  taskUpdatedEvent,
-} from "../events.js";
-import {
   jsonEvent,
+  START,
   WrongExpectedVersionError,
 } from "@kurrent/kurrentdb-client";
 import { Pool } from "pg";
+import { socketStore } from "../socketStore.js";
+import {
+  ApiTaskResource,
+  KurrentDBTaskCompleted,
+  KurrentDBTaskCreated,
+  KurrentDBTaskReopened,
+  KurrentDBTaskUpdated,
+  TaskCompletedEvent,
+  TaskCreatedEvent,
+  TaskDeletedEvent,
+  TaskReopenedEvent,
+  TaskUpdatedEvent,
+} from "@model/TaskResource";
 
 const pgHost = process.env.PG_HOST;
 const pgDatabase = process.env.PG_DATABASE;
@@ -29,6 +32,29 @@ const pg = new Pool({ connectionString });
 
 const router = Router();
 
+type PgTaskRow = {
+  id: string;
+  name: string;
+  deadline: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  completed_at: Date | null;
+  deleted_at: Date | null;
+  revision: number;
+};
+const psqlRowToApiResource = (row: PgTaskRow): ApiTaskResource => {
+  return {
+    id: row.id,
+    name: row.name,
+    deadline: row.deadline || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at || undefined,
+    deletedAt: row.deleted_at || undefined,
+    revision: row.revision,
+  };
+};
+
 // ---------- Get Task By Id -------
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
@@ -37,19 +63,18 @@ router.get("/:id", async (req, res) => {
     `SELECT * FROM public.tasks WHERE id = $1;`,
     [id],
   );
-  console.log(JSON.stringify(taskProjectionRes));
 
   if (taskProjectionRes.rows.length === 0) {
     res.sendStatus(404);
     return;
   }
 
-  res.json(taskProjectionRes.rows[0]);
+  res.json(psqlRowToApiResource(taskProjectionRes.rows[0]));
 });
 
 // ---------- Get All Tasks --------
 const getAllOptionsSchema = z.object({
-  includeDeleted: z.boolean().optional()
+  includeDeleted: z.boolean().optional(),
 });
 type GetAllOptions = z.infer<typeof getAllOptionsSchema>;
 
@@ -58,23 +83,22 @@ router.get("/", async (req, res) => {
   if (!parseResult.success) {
     return res.status(400).json({
       error: "Invalid request body",
-      details: parseResult.error.format()
+      details: parseResult.error.format(),
     });
   }
   const getAllOptions: GetAllOptions = parseResult.data;
   // TODO: Change this to something less insane
-  const sql = `SELECT * FROM public.tasks ${getAllOptions.includeDeleted ? '' : 'WHERE deleted = false'}`;
+  const sql = `SELECT * FROM public.tasks ${getAllOptions.includeDeleted ? "" : "WHERE deleted_at IS NULL"}`;
   const taskProjectionRes = await pg.query(sql);
-  console.log(JSON.stringify(taskProjectionRes));
 
-  res.json({ tasks: taskProjectionRes.rows });
+  res.json({ tasks: taskProjectionRes.rows.map(psqlRowToApiResource) });
 });
 
 // ---------- Create Task ----------
 
 const createTaskRequestSchema = z.object({
   name: z.string(),
-  deadline: z.coerce.date().nullable().optional()
+  deadline: z.coerce.date().nullable().optional(),
 });
 type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
 
@@ -90,18 +114,35 @@ router.post("/", async (req, res) => {
   const id = `Task-${randomUUID()}`;
   const createTaskRequest: CreateTaskRequest = parseResult.data;
 
-  const taskCreated: TaskCreated = {
+  const taskCreated: KurrentDBTaskCreated = {
     name: createTaskRequest.name,
-    deadline: createTaskRequest.deadline === null ? undefined : createTaskRequest.deadline
+    deadline:
+      createTaskRequest.deadline === null
+        ? undefined
+        : createTaskRequest.deadline
   };
 
   const event = jsonEvent({
-    type: taskCreatedEvent,
+    type: TaskCreatedEvent,
     data: taskCreated,
   });
 
   try {
-    await kdb.appendToStream(id, event, { streamState: "no_stream" });
+    const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
+      streamState: "no_stream",
+    });
+    const streamRes = kdb.readStream(id, {
+      fromRevision: START,
+      maxCount: 1,
+    });
+    const createdEvent = await streamRes.next();
+
+    socketStore.broadcast(TaskCreatedEvent, {
+      id,
+      ...taskCreated,
+      createdAt: createdEvent.value.event.created,
+      revision: Number(nextExpectedRevision),
+    });
     return res.status(201).json({ id, status: "created" });
   } catch (err) {
     if (
@@ -119,7 +160,7 @@ router.post("/", async (req, res) => {
 // ---------- Mark Task Complete ---
 const markTaskCompletedRequestSchema = z.object({
   expectedRevision: z.coerce.bigint(),
-  completedAt: z.coerce.date().optional()
+  completedAt: z.coerce.date().optional(),
 });
 type MarkTaskCompletedRequest = z.infer<typeof markTaskCompletedRequestSchema>;
 
@@ -134,25 +175,31 @@ router.post("/:id/complete", async (req, res) => {
     });
   }
 
-  const { completedAt, expectedRevision }: MarkTaskCompletedRequest = parseResult.data;
+  const { completedAt, expectedRevision }: MarkTaskCompletedRequest =
+    parseResult.data;
 
-  const taskCompleted: TaskCompleted = {
-    completedAt: completedAt ?? new Date()
+  const taskCompleted: KurrentDBTaskCompleted = {
+    completedAt: completedAt ?? new Date(),
   };
 
   const event = jsonEvent({
-    type: taskCompletedEvent,
+    type: TaskCompletedEvent,
     data: taskCompleted,
   });
 
   try {
     const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
-      streamState: BigInt(expectedRevision)
+      streamState: BigInt(expectedRevision),
+    });
+    socketStore.broadcast(TaskCompletedEvent, {
+      id,
+      ...taskCompleted,
+      revision: Number(nextExpectedRevision),
     });
     return res.status(202).json({
       id,
       status: "task-completed",
-      nextExpectedRevision: `${nextExpectedRevision}`
+      nextExpectedRevision: Number(nextExpectedRevision),
     });
   } catch (err) {
     if (
@@ -163,7 +210,10 @@ router.post("/:id/complete", async (req, res) => {
       return;
     }
 
-    if (err instanceof WrongExpectedVersionError && err.type === "wrong-expected-version") {
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.type === "wrong-expected-version"
+    ) {
       res.sendStatus(412);
       return;
     }
@@ -175,7 +225,7 @@ router.post("/:id/complete", async (req, res) => {
 // ---------- Reopen Task -------
 const reopenTaskRequestSchema = z.object({
   reopenedAt: z.coerce.date().optional(),
-  expectedRevision: z.coerce.bigint()
+  expectedRevision: z.coerce.bigint(),
 });
 type ReopenTaskRequest = z.infer<typeof reopenTaskRequestSchema>;
 
@@ -192,23 +242,28 @@ router.post("/:id/reopen", async (req, res) => {
 
   const { reopenedAt, expectedRevision }: ReopenTaskRequest = parseResult.data;
 
-  const taskReopened: TaskReopened = {
-    reopenedAt: reopenedAt ?? new Date()
+  const taskReopened: KurrentDBTaskReopened = {
+    reopenedAt: reopenedAt ?? new Date(),
   };
 
   const event = jsonEvent({
-    type: taskReopenedEvent,
+    type: TaskReopenedEvent,
     data: taskReopened,
   });
 
   try {
     const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
-      streamState: BigInt(expectedRevision)
+      streamState: BigInt(expectedRevision),
+    });
+    socketStore.broadcast(TaskReopenedEvent, {
+      id,
+      ...taskReopened,
+      revision: Number(nextExpectedRevision),
     });
     return res.status(202).json({
       id,
       status: "task-reopened",
-      nextExpectedRevision: `${nextExpectedRevision}`
+      nextExpectedRevision: Number(nextExpectedRevision),
     });
   } catch (err) {
     if (
@@ -219,7 +274,10 @@ router.post("/:id/reopen", async (req, res) => {
       return;
     }
 
-    if (err instanceof WrongExpectedVersionError && err.type === "wrong-expected-version") {
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.type === "wrong-expected-version"
+    ) {
       res.sendStatus(412);
       return;
     }
@@ -249,12 +307,12 @@ router.put("/:id", async (req, res) => {
 
   const updateTaskRequest: UpdateTaskRequest = parseResult.data;
 
-  const taskUpdated: TaskUpdated = {
+  const taskUpdated: KurrentDBTaskUpdated = {
     name: updateTaskRequest.name,
   };
 
   const event = jsonEvent({
-    type: taskUpdatedEvent,
+    type: TaskUpdatedEvent,
     data: taskUpdated,
   });
 
@@ -262,10 +320,15 @@ router.put("/:id", async (req, res) => {
     const { nextExpectedRevision } = await kdb.appendToStream(id, event, {
       streamState: req.body.expectedRevision,
     });
+    socketStore.broadcast(TaskUpdatedEvent, {
+      id,
+      ...taskUpdated,
+      revision: Number(nextExpectedRevision),
+    });
     return res.status(202).json({
       id,
       status: "update-accepted",
-      nextExpectedRevision: `${nextExpectedRevision}`,
+      nextExpectedRevision: Number(nextExpectedRevision),
     });
   } catch (err) {
     if (
@@ -280,7 +343,7 @@ router.put("/:id", async (req, res) => {
       err instanceof WrongExpectedVersionError &&
       err.type === "wrong-expected-version"
     ) {
-      console.log(err);
+      console.error(err);
       res.sendStatus(412);
       return;
     }
@@ -296,12 +359,13 @@ router.delete("/:id", async (req, res) => {
   const id = req.params.id;
 
   const event = jsonEvent({
-    type: taskDeletedEvent,
+    type: TaskDeletedEvent,
     data: {},
   });
 
   try {
     await kdb.appendToStream(id, event, { streamState: "stream_exists" });
+    socketStore.broadcast(TaskDeletedEvent, { id });
     return res.sendStatus(202);
   } catch (err) {
     if (
@@ -315,7 +379,7 @@ router.delete("/:id", async (req, res) => {
       err instanceof WrongExpectedVersionError &&
       err.type === "wrong-expected-version"
     ) {
-      console.log(err);
+      console.error(err);
       res.sendStatus(412);
       return;
     }

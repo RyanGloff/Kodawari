@@ -14,9 +14,7 @@
                                 <constraints nullable="false" />
                         </column>
 
-                        <column name="deleted" type="boolean" defaultValueBoolean="false">
-                                <constraints nullable="false" />
-                        </column>
+                        <column name="deleted_at" type="timestamp with time zone"></column>
 
                         <column name="revision" type="bigint">
                                 <constraints nullable="false" />
@@ -36,7 +34,7 @@
                 </createIndex>
 
                 <createIndex indexName="idx_tasks_deleted" tableName="tasks">
-                        <column name="deleted" />
+                        <column name="deleted_at" />
                 </createIndex>
         </changeSet>
 

@@ -1,28 +1,13 @@
-export type TaskResource = {
-  id: string;
-  name: string;
-  deadline?: Date;
-  completed_at?: Date;
-  deleted: boolean;
-  created_at: Date;
-  updated_at: Date;
-  revision: bigint;
-};
+import type { ApiTaskResource } from "@model/TaskResource";
+import { apiUrl } from "./ApiConstants";
 
 export type GetTasksOptions = {
   includeDeleted: boolean;
 };
 
-const protocol = "http";
-const host = window.location.hostname;
-const port = 3000;
-const apiPath = "/api";
-
-const apiUrl = `${protocol}://${host}:${port}${apiPath}`;
-
 export async function getTasks(
   options?: GetTasksOptions,
-): Promise<TaskResource[]> {
+): Promise<ApiTaskResource[]> {
   const response = await fetch(`${apiUrl}/task`, {
     method: "GET",
     headers: {
@@ -36,10 +21,10 @@ export async function getTasks(
   }
 
   const body = await response.json();
-  const tasks: TaskResource[] = body.tasks.map((task: any) => {
+  const tasks: ApiTaskResource[] = body.tasks.map((task: any) => {
     task.deadline = task.deadline ? new Date(task.deadline) : undefined;
-    task.created_at = new Date(task.created_at);
-    task.updated_at = new Date(task.updated_at);
+    task.createdAt = new Date(task.createdAt);
+    task.updatedAt = new Date(task.updatedAt);
     return task;
   });
 
@@ -72,11 +57,11 @@ export async function createTask(options: CreateTaskOptions): Promise<CreateTask
 };
 
 export type MarkTaskCompleteResponse = {
-  nextExpectedRevision: bigint;
+  nextExpectedRevision: number;
 };
 export async function markTaskComplete(
   taskId: string,
-  expectedRevision: bigint,
+  expectedRevision: number,
 ): Promise<MarkTaskCompleteResponse> {
   const response = await fetch(`${apiUrl}/task/${taskId}/complete`, {
     method: "POST",
@@ -90,16 +75,16 @@ export async function markTaskComplete(
     throw new Error(`Failed to mark task complete: [${taskId}]`);
   }
 
-  const body: { nextExpectedRevision: bigint } = await response.json();
+  const body: { nextExpectedRevision: number } = await response.json();
   return body;
 }
 
 export type ReopenTaskResponse = {
-  nextExpectedRevision: bigint;
+  nextExpectedRevision: number;
 };
 export async function reopenTask(
   taskId: string,
-  expectedRevision: bigint,
+  expectedRevision: number,
 ): Promise<ReopenTaskResponse> {
   const response = await fetch(`${apiUrl}/task/${taskId}/reopen`, {
     method: "POST",
@@ -113,7 +98,7 @@ export async function reopenTask(
     throw new Error(`Failed to reopen task: [${taskId}]`);
   }
 
-  const body: { nextExpectedRevision: bigint } = await response.json();
+  const body: { nextExpectedRevision: number } = await response.json();
   return body;
 }
 

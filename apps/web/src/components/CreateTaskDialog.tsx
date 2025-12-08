@@ -30,10 +30,6 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
     };
 
     createTask(req)
-    .then(res => {
-      addToast("Task created", "success");
-      console.log(`success: ${JSON.stringify(res)}`);
-    })
     .catch(e => {
       addToast("Failed to create task", "error");
       console.error(e);

@@ -1,5 +1,10 @@
 {
-  "dependencies": {
-    "cors": "^2.8.5"
-  }
+  "name": "kodawari",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/apiProjectionWorker",
+    "apps/web",
+    "apps/model"
+  ]
 }
