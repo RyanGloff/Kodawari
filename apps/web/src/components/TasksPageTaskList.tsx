@@ -19,6 +19,7 @@ import type { ApiTaskResource } from "@model/TaskResource";
 
 export function TasksPageTaskList() {
   const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const getTaskList = async (): Promise<ApiTaskResource[]> => {
     const tasks = await getTasks();
@@ -88,19 +89,17 @@ export function TasksPageTaskList() {
   };
 
   const reopenClicked = (id: string, expectedRevision: number): void => {
-    reopenTask(id, expectedRevision)
-      .catch((e: any) => {
-        addToast("Failed to reopen task", "error");
-        console.error(e);
-      });
+    reopenTask(id, expectedRevision).catch((e: any) => {
+      addToast("Failed to reopen task", "error");
+      console.error(e);
+    });
   };
 
   const deleteClicked = (id: string): void => {
-    deleteTask(id)
-      .catch((e: any) => {
-        addToast("Failed to delete task", "error");
-        console.error(e);
-      });
+    deleteTask(id).catch((e: any) => {
+      addToast("Failed to delete task", "error");
+      console.error(e);
+    });
   };
 
   return (
@@ -112,16 +111,27 @@ export function TasksPageTaskList() {
         open={createDialogIsOpen}
         onClose={() => setCreateDialogIsOpen(false)}
       />
+      <div className="filters">
+        <div className="showCompleted">
+          <label>Show Completed</label>
+          <input
+            type="checkbox"
+            className="apple"
+            checked={showCompleted}
+            onChange={(e) => setShowCompleted(e.target.checked)}
+          />
+        </div>
+      </div>
       <ul>
         {Object.values(taskMap).map((task: ApiTaskResource) =>
-          task.deletedAt ? (
+          task.deletedAt || (task.completedAt && !showCompleted) ? (
             ""
           ) : (
             <li key={task.id}>
               <details id={`TaskDetailsElement-${task.id}`}>
                 <summary>
                   <div className="name">
-                      <h2>{task.name}</h2>
+                    <h2>{task.name}</h2>
                   </div>
                   <div className={`timeline ${getSeverityLevel(task)}`}>
                     {task.completedAt ? "COMPLETE" : ""}
@@ -158,9 +168,11 @@ export function TasksPageTaskList() {
                     </button>
                   </div>
                   <ul className="tag-list">
-                    {task.tags ? task.tags.map(tag => 
-                      <li key={`${task.id}${tag.id}`}>{tag.name}</li>
-                    ) : ''}
+                    {task.tags
+                      ? task.tags.map((tag) => (
+                          <li key={`${task.id}${tag.id}`}>{tag.name}</li>
+                        ))
+                      : ""}
                   </ul>
                   {task.deadline ? (
                     <div>

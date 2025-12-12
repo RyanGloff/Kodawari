@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom";
 
 import "./CreateTaskDailog.css";
+import "./AppleCheckBox.css";
 import { useState } from "react";
 import { createTask } from "../api/TaskApiClient";
 import { useToast } from "./toast/ToastContext";
@@ -11,12 +12,15 @@ type CreateTaskDialogProps = {
 };
 
 export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
-  const defaultDeadlines: {label: {quantity: number, scale: string}, value: number }[] = [
-    { label: { quantity: 1, scale: "Day" }, value: 24 * 60 * 60 * 1000},
-    { label: { quantity: 1, scale: "Week" }, value: 7 * 24 * 60 * 60 * 1000},
-    { label: { quantity: 2, scale: "Week" }, value: 14 * 24 * 60 * 60 * 1000},
-    { label: { quantity: 1, scale: "Month" }, value: 30 * 24 * 60 * 60 * 1000},
-    { label: { quantity: 3, scale: "Month" }, value: 60 * 24 * 60 * 60 * 1000},
+  const defaultDeadlines: {
+    label: { quantity: number; scale: string };
+    value: number;
+  }[] = [
+    { label: { quantity: 1, scale: "Day" }, value: 24 * 60 * 60 * 1000 },
+    { label: { quantity: 1, scale: "Week" }, value: 7 * 24 * 60 * 60 * 1000 },
+    { label: { quantity: 2, scale: "Week" }, value: 14 * 24 * 60 * 60 * 1000 },
+    { label: { quantity: 1, scale: "Month" }, value: 30 * 24 * 60 * 60 * 1000 },
+    { label: { quantity: 3, scale: "Month" }, value: 60 * 24 * 60 * 60 * 1000 },
   ];
   const { addToast } = useToast();
 
@@ -33,11 +37,10 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
   const submitClicked = () => {
     const req = {
       name,
-      deadline
+      deadline,
     };
 
-    createTask(req)
-    .catch(e => {
+    createTask(req).catch((e) => {
       addToast("Failed to create task", "error");
       console.error(e);
     });
@@ -84,13 +87,16 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
         />
 
         <div className="default-deadline-container">
-          {defaultDeadlines.map(entry => (
-            <button className="default-deadline" onClick={() => defaultDeadlineClicked(entry.value)}>
+          {defaultDeadlines.map((entry) => (
+            <button
+              className="default-deadline"
+              onClick={() => defaultDeadlineClicked(entry.value)}
+            >
+              <div>{entry.label.quantity}</div>
               <div>
-                {entry.label.quantity}
-              </div>
-              <div>
-                {entry.label.quantity === 1 ? entry.label.scale : `${entry.label.scale}s`}
+                {entry.label.quantity === 1
+                  ? entry.label.scale
+                  : `${entry.label.scale}s`}
               </div>
             </button>
           ))}
