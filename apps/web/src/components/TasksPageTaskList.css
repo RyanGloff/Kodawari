@@ -113,3 +113,24 @@ summary .timeline.ok {
   color: green;
 }
 
+summary .name h2 {
+  margin: 0;
+  font-size: inherit;
+  display: inline-block;
+}
+
+ul.tag-list {
+  display: block;
+}
+
+ul.tag-list > li {
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  margin: 0 0.125rem;
+  display: inline-block;
+  font-size: 0.75em;
+  background: var(--submit-green);
+  color: var(--submit-text-clr);
+  margin-top: 0.75rem;
+}
+

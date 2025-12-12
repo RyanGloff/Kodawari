@@ -1,12 +1,15 @@
+import { ApiTagResource } from "./TagResource.js";
+
 export type ApiTaskResource = {
-  id: string;           // Name of the KurrentDB stream
-  name: string;         // Event field
-  deadline?: Date;      // Event field
-  completedAt?: Date;   // Created time of latest KurrentDBTaskCompleted Event
-  createdAt: Date;      // Created time of KurrentDBTaskCreated Event
-  updatedAt: Date;      // Created time of latest KurrentDB Event
-  deletedAt?: Date;     // Created time of KurrentDBTaskDeleted Event
-  revision: number;     // Revision of latest KurrentDB Event
+  id: string;                           // Name of the KurrentDB stream
+  name: string;                         // Event field
+  deadline?: Date;                      // Event field
+  tags: ApiTagResource[] | undefined;   // Optionally provided tags
+  completedAt?: Date;                   // Created time of latest KurrentDBTaskCompleted Event
+  createdAt: Date;                      // Created time of KurrentDBTaskCreated Event
+  updatedAt: Date;                      // Created time of latest KurrentDB Event
+  deletedAt?: Date;                     // Created time of KurrentDBTaskDeleted Event
+  revision: number;                     // Revision of latest KurrentDB Event
 };
 
 // Event Names
@@ -14,6 +17,8 @@ export const TaskCreatedEvent = "TaskCreated";
 export const TaskUpdatedEvent = "TaskUpdated";
 export const TaskCompletedEvent = "TaskCompleted";
 export const TaskReopenedEvent = "TaskReopened";
+export const TagAttachedToTaskEvent = "TagAttachedToTaskEvent";
+export const TagDetachedFromTaskEvent = "TagDetachedFromTaskEvent";
 export const TaskDeletedEvent = "TaskDeleted";
 
 // SocketIO Events
@@ -44,6 +49,14 @@ export type ApiTaskReopened = {
   revision: number;
 };
 
+export type ApiTagAttachedToTask = {
+  tagId: string;
+};
+
+export type ApiTagDetachedFromTask = {
+  tagId: string;
+};
+
 export type ApiTaskDeleted = {
   id: string;
   deletedAt: string;
@@ -65,6 +78,14 @@ export type KurrentDBTaskCompleted = {
 };
 
 export type KurrentDBTaskReopened = {};
+
+export type KurrentDBTagAttachedToTask = {
+  tagId: string;
+};
+
+export type KurrentDBTagDetachedFromTask = {
+  tagId: string;
+};
 
 export type KurrentDBTaskDeleted = {};
 

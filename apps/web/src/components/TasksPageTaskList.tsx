@@ -120,7 +120,9 @@ export function TasksPageTaskList() {
             <li key={task.id}>
               <details id={`TaskDetailsElement-${task.id}`}>
                 <summary>
-                  <div className="name">{task.name}</div>
+                  <div className="name">
+                      <h2>{task.name}</h2>
+                  </div>
                   <div className={`timeline ${getSeverityLevel(task)}`}>
                     {task.completedAt ? "COMPLETE" : ""}
                     {!task.completedAt && task.deadline
@@ -155,6 +157,11 @@ export function TasksPageTaskList() {
                       Delete
                     </button>
                   </div>
+                  <ul className="tag-list">
+                    {task.tags ? task.tags.map(tag => 
+                      <li key={`${task.id}${tag.id}`}>{tag.name}</li>
+                    ) : ''}
+                  </ul>
                   {task.deadline ? (
                     <div>
                       <label>Deadline:</label>

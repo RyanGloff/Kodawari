@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+        <changeSet id="0006-create-task-tag-join-table" author="ryan">
+                <createTable tableName="task_tag">
+                        <column name="id" type="serial">
+                                <constraints primaryKey="true" nullable="false"/>
+                        </column>
+
+                        <column name="task_id" type="text">
+                                <constraints nullable="false" />
+                        </column>
+
+                        <column name="tag_id" type="text">
+                                <constraints nullable="false" />
+                        </column>
+
+                        <column name="added_at" type="timestamp with time zone" defaultValue="now()">
+                                <constraints nullable="false"/>
+                        </column>
+                </createTable>
+
+                <createIndex indexName="idx_tag_id" tableName="task_tag">
+                        <column name="tag_id" />
+                </createIndex>
+
+                <createIndex indexName="idx_task_id" tableName="task_tag">
+                        <column name="task_id" />
+                </createIndex>
+        </changeSet>
+
+</databaseChangeLog>
+

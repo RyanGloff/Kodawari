@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+        <changeSet id="0005-create-tags-table" author="ryan">
+                <createTable tableName="tags">
+                        <column name="id" type="text">
+                                <constraints primaryKey="true" nullable="false" />
+                        </column>
+
+                        <column name="name" type="text">
+                                <constraints nullable="false" />
+                        </column>
+
+                        <column name="deleted_at" type="timestamp with time zone"></column>
+
+                        <column name="created_at" type="timestamp with time zone">
+                                <constraints nullable="false" />
+                        </column>
+                        <column name="updated_at" type="timestamp with time zone">
+                                <constraints nullable="false" />
+                        </column>
+                        <column name="revision" type="bigint">
+                                <constraints nullable="false" />
+                        </column>
+                </createTable>
+
+                <createIndex indexName="idx_tags_name" tableName="tags">
+                        <column name="name" />
+                </createIndex>
+
+                <createIndex indexName="idx_tags_created_at" tableName="tags">
+                        <column name="created_at" />
+                </createIndex>
+
+                <createIndex indexName="idx_tags_deleted" tableName="tags">
+                        <column name="deleted_at" />
+                </createIndex>
+        </changeSet>
+
+</databaseChangeLog>
+

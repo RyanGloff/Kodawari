@@ -21,6 +21,7 @@ import {
   TaskReopenedEvent,
   TaskUpdatedEvent,
 } from "@model/TaskResource";
+import { KurrentDBTagAttachedToTask, TagAttachedToTaskEvent } from "@model/TaskResource.js";
 
 const pgHost = process.env.PG_HOST;
 const pgDatabase = process.env.PG_DATABASE;
@@ -41,6 +42,7 @@ type PgTaskRow = {
   completed_at: Date | null;
   deleted_at: Date | null;
   revision: number;
+  tags: PgTagRow[] | undefined;
 };
 const psqlRowToApiResource = (row: PgTaskRow): ApiTaskResource => {
   return {
@@ -52,34 +54,80 @@ const psqlRowToApiResource = (row: PgTaskRow): ApiTaskResource => {
     completedAt: row.completed_at || undefined,
     deletedAt: row.deleted_at || undefined,
     revision: row.revision,
+    tags: row.tags?.map(psqlTagRowToApiResource)
+  };
+};
+type PgTagRow = {
+  id: number;
+  name: string;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at: Date | null;
+  revision: number;
+};
+const psqlTagRowToApiResource = (row: PgTagRow): ApiTaskResource => {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at || undefined,
+    revision: row.revision
   };
 };
 
 // ---------- Get Task By Id -------
+const getByIdOptionsSchema = z.object({
+  includeTags: z.coerce.boolean().default(true)
+}).optional();
+type GetByIdOptions = z.infer<typeof getByIdOptionsSchema>;
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
+
+  const parseResult = getByIdOptionsSchema.safeParse(req.body);
+
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid request body",
+      details: parseResult.error.format(),
+    });
+  }
+
+  const options = parseResult.data;
 
   const taskProjectionRes = await pg.query(
     `SELECT * FROM public.tasks WHERE id = $1;`,
     [id],
   );
-
   if (taskProjectionRes.rows.length === 0) {
     res.sendStatus(404);
     return;
   }
+  const taskResource = psqlRowToApiResource(taskProjectionRes.rows[0]);
 
-  res.json(psqlRowToApiResource(taskProjectionRes.rows[0]));
+  if (options?.includeTags) {
+    taskResource.tags = (await pg.query(`
+SELECT tags.name as name FROM public.task_tag as tt 
+  INNER JOIN public.tags as tags
+    ON tt.tag_id = tags.id
+  WHERE tt.task_id = $1;`,
+      [id]
+    )).rows.map(psqlTagRowToApiResource);
+  }
+
+  res.json(taskResource);
 });
 
 // ---------- Get All Tasks --------
 const getAllOptionsSchema = z.object({
-  includeDeleted: z.boolean().optional(),
+  includeDeleted: z.coerce.boolean().default(false),
+  includeTags: z.coerce.boolean().default(true)
 });
 type GetAllOptions = z.infer<typeof getAllOptionsSchema>;
 
 router.get("/", async (req, res) => {
   const parseResult = getAllOptionsSchema.safeParse(req.body);
+  console.log(JSON.stringify(parseResult));
   if (!parseResult.success) {
     return res.status(400).json({
       error: "Invalid request body",
@@ -88,10 +136,30 @@ router.get("/", async (req, res) => {
   }
   const getAllOptions: GetAllOptions = parseResult.data;
   // TODO: Change this to something less insane
-  const sql = `SELECT * FROM public.tasks ${getAllOptions.includeDeleted ? "" : "WHERE deleted_at IS NULL"}`;
+  let sql = `
+SELECT
+  t.*,
+  ${getAllOptions.includeTags ? `COALESCE(
+    json_agg(
+      json_build_object(
+        'id', tg.id,
+        'name', tg.name
+      )
+    ) FILTER (WHERE tg.id IS NOT NULL),
+    '[]'
+  ) AS tags` : ''}
+FROM tasks t
+${getAllOptions.includeTags ? `
+LEFT JOIN task_tag tt ON tt.task_id = t.id
+LEFT JOIN tags tg ON tg.id = tt.tag_id
+GROUP BY t.id` : ''}
+ORDER BY t.id;
+`;
   const taskProjectionRes = await pg.query(sql);
+  console.log(JSON.stringify(taskProjectionRes.rows));
+  const tasks = taskProjectionRes.rows.map(psqlRowToApiResource);
 
-  res.json({ tasks: taskProjectionRes.rows.map(psqlRowToApiResource) });
+  res.json({ tasks });
 });
 
 // ---------- Create Task ----------
@@ -387,6 +455,69 @@ router.delete("/:id", async (req, res) => {
     console.error("Failed to append TaskDeleted event", err);
     return res.sendStatus(500);
   }
+});
+
+const attachTagRequestSchema = z.object({
+  tagId: z.string()
+});
+type AttachTagRequest = z.infer<typeof attachTagRequestSchema>;
+router.post("/:id/attachTag", async (req, res) => {
+  const taskId = req.params.id;
+
+  const parseResult = attachTagRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid request body",
+      details: parseResult.error.format(),
+    });
+  }
+  const attachTagRequest: AttachTagRequest = parseResult.data;
+
+  const tagAttachedToTask: KurrentDBTagAttachedToTask = {
+    tagId: attachTagRequest.tagId,
+  };
+
+  const event = jsonEvent({
+    type: TagAttachedToTaskEvent,
+    data: tagAttachedToTask,
+  });
+
+  try {
+    const { nextExpectedRevision } = await kdb.appendToStream(taskId, event, {
+      streamState: req.body.expectedRevision,
+    });
+    socketStore.broadcast(TagAttachedToTaskEvent, {
+      taskId,
+      tagId: attachTagRequest.tagId,
+      revision: Number(nextExpectedRevision),
+    });
+    return res.status(202).json({
+      id: taskId,
+      status: "tag-attached",
+      nextExpectedRevision: Number(nextExpectedRevision),
+    });
+  } catch (err) {
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.actualState === "no_stream"
+    ) {
+      res.sendStatus(404);
+      return;
+    }
+
+    if (
+      err instanceof WrongExpectedVersionError &&
+      err.type === "wrong-expected-version"
+    ) {
+      console.error(err);
+      res.sendStatus(412);
+      return;
+    }
+
+    console.error("Failed to append TagAttachedToTask event", err);
+    return res.sendStatus(500);
+  }
+  
 });
 
 export default router;
