@@ -11,6 +11,13 @@ type CreateTaskDialogProps = {
 };
 
 export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
+  const defaultDeadlines: {label: {quantity: number, scale: string}, value: number }[] = [
+    { label: { quantity: 1, scale: "Day" }, value: 24 * 60 * 60 * 1000},
+    { label: { quantity: 1, scale: "Week" }, value: 7 * 24 * 60 * 60 * 1000},
+    { label: { quantity: 2, scale: "Week" }, value: 14 * 24 * 60 * 60 * 1000},
+    { label: { quantity: 1, scale: "Month" }, value: 30 * 24 * 60 * 60 * 1000},
+    { label: { quantity: 3, scale: "Month" }, value: 60 * 24 * 60 * 60 * 1000},
+  ];
   const { addToast } = useToast();
 
   const [name, setName] = useState<string>("");
@@ -51,6 +58,12 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
     return date.toISOString().split("T")[0];
   };
 
+  const defaultDeadlineClicked = (deltaT: number): void => {
+    const deadline = new Date();
+    deadline.setTime(new Date().getTime() + deltaT);
+    setDeadline(deadline);
+  };
+
   return ReactDOM.createPortal(
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog-panel" onClick={(e) => e.stopPropagation()}>
@@ -69,6 +82,19 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
           value={toInputDateString(deadline)}
           onChange={(e) => setDeadline(new Date(e.target.value))}
         />
+
+        <div className="default-deadline-container">
+          {defaultDeadlines.map(entry => (
+            <button className="default-deadline" onClick={() => defaultDeadlineClicked(entry.value)}>
+              <div>
+                {entry.label.quantity}
+              </div>
+              <div>
+                {entry.label.quantity === 1 ? entry.label.scale : `${entry.label.scale}s`}
+              </div>
+            </button>
+          ))}
+        </div>
 
         <button className="submit" onClick={submitClicked}>
           Create

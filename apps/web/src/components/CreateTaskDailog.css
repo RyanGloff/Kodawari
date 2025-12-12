@@ -66,11 +66,23 @@ input[name="deadline"] {
     margin 0.4s ease
 }
 
-button {
+button{
   all: unset;
-  background: var(--submit-green);
-  color: var(--submit-text-clr);
   font-weight: 600;
+}
+
+.default-deadline-container {
+  display: flex;
+}
+.default-deadline-container > button {
+  font-size: 0.75em;
+  font-weight: 300;
+  flex: 1;
+  background: var(--bg-light);
+  color: white;
+  border-radius: 0.5em;
+  padding: 0.5em;
+  cursor: pointer;
 }
 
 .submit {
