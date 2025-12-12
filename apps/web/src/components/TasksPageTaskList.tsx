@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./TasksPageTaskList.css";
 import { CreateTaskDialog } from "./CreateTaskDialog";
+import { TasksPageFiltersDialog } from './TasksPageFiltersDialog';
 import {
   deleteTask,
   getTasks,
@@ -17,9 +18,16 @@ import { useToast } from "./toast/ToastContext";
 import { useTaskEvents } from "../hooks/useTaskEvents";
 import type { ApiTaskResource } from "@model/TaskResource";
 
+export type Filters = {
+  showCompleted: boolean;
+};
+
 export function TasksPageTaskList() {
   const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [ filters, setFilters ] = useState<Filters>({
+    showCompleted: false
+  });
+  const [ filtersDialogIsOpen, setFiltersDialogIsOpen ] = useState(false);
 
   const getTaskList = async (): Promise<ApiTaskResource[]> => {
     const tasks = await getTasks();
@@ -102,29 +110,30 @@ export function TasksPageTaskList() {
     });
   };
 
+
   return (
     <div className="TasksPageTaskList">
-      <button className="add-new" onClick={() => setCreateDialogIsOpen(true)}>
-        +
-      </button>
+      <div className="floating-buttons">
+        <button className="show-filters" onClick={() => setFiltersDialogIsOpen(true)}>
+          <img src="/Filter.svg" alt="filter icon"/>
+        </button>
+        <button className="add-new" onClick={() => setCreateDialogIsOpen(true)}>
+          +
+        </button>
+      </div>
       <CreateTaskDialog
         open={createDialogIsOpen}
         onClose={() => setCreateDialogIsOpen(false)}
       />
-      <div className="filters">
-        <div className="showCompleted">
-          <label>Show Completed</label>
-          <input
-            type="checkbox"
-            className="apple"
-            checked={showCompleted}
-            onChange={(e) => setShowCompleted(e.target.checked)}
-          />
-        </div>
-      </div>
+      <TasksPageFiltersDialog
+        open={filtersDialogIsOpen}
+        filters={filters}
+        updateFilters={setFilters}
+        onClose={() => setFiltersDialogIsOpen(false)}
+      />
       <ul>
         {Object.values(taskMap).map((task: ApiTaskResource) =>
-          task.deletedAt || (task.completedAt && !showCompleted) ? (
+          task.deletedAt || (task.completedAt && !filters.showCompleted) ? (
             ""
           ) : (
             <li key={task.id}>

@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom";
 
+import './dialog.css';
 import "./CreateTaskDailog.css";
 import "./AppleCheckBox.css";
 import { useState } from "react";
@@ -91,6 +92,7 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
             <button
               className="default-deadline"
               onClick={() => defaultDeadlineClicked(entry.value)}
+              key={`${entry.label.quantity}-${entry.label.scale}`}
             >
               <div>{entry.label.quantity}</div>
               <div>

@@ -1,0 +1,29 @@
+.TasksPageFiltersDialog {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.TasksPageFiltersDialog > * {
+  flex: 1;
+}
+
+.checkbox-container {
+  display: flex;
+}
+.checkbox-container > * {
+  flex: 1;
+}
+.checkbox-container > label {
+  text-align: left;
+}
+
+button {
+  background: var(--bg-light);
+}
+

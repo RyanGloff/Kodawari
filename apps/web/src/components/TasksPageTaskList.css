@@ -1,8 +1,13 @@
-.add-new {
-  all: unset;
+.floating-buttons {
   position: absolute;
   right: 1rem;
   bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.floating-buttons > * {
+  all: unset;
   aspect-ratio: 1;
   height: 2.5rem;
   display: flex;
@@ -16,11 +21,14 @@
   padding: 0.5rem;
   border-radius: 1rem;
 }
-.add-new:hover {
+.floating-buttons > *:hover {
   background: var(--bg);
 }
-.add-new:active {
+.floating-buttons > *:active {
   background: var(--bg-darkest);
+}
+.floating-buttons img {
+  height: 0.875em;
 }
 
 ul {
