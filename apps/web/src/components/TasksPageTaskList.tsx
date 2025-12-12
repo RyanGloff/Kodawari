@@ -17,6 +17,7 @@ import { useTaskStore, type TaskMap, type TaskStore } from "../state/TaskStore";
 import { useToast } from "./toast/ToastContext";
 import { useTaskEvents } from "../hooks/useTaskEvents";
 import type { ApiTaskResource } from "@model/TaskResource";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 export type Filters = {
   showCompleted: boolean;
@@ -104,12 +105,24 @@ export function TasksPageTaskList() {
   };
 
   const deleteClicked = (id: string): void => {
-    deleteTask(id).catch((e: any) => {
+    setTaskIdToDelete(id);
+    setDeleteConfirmationOpen(true);
+  };
+  
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [taskIdToDelete, setTaskIdToDelete] = useState<string | null>(null);
+
+  const deleteConfirmationClosed = (accepted: boolean): void => {
+    setDeleteConfirmationOpen(false);
+    if (!accepted || !taskIdToDelete) {
+      return;
+    }
+
+    deleteTask(taskIdToDelete).catch((e: any) => {
       addToast("Failed to delete task", "error");
       console.error(e);
     });
   };
-
 
   return (
     <div className="TasksPageTaskList">
@@ -131,6 +144,10 @@ export function TasksPageTaskList() {
         updateFilters={setFilters}
         onClose={() => setFiltersDialogIsOpen(false)}
       />
+      <ConfirmationDialog
+        open={deleteConfirmationOpen}
+        onClose={deleteConfirmationClosed}
+        />
       <ul>
         {Object.values(taskMap).map((task: ApiTaskResource) =>
           task.deletedAt || (task.completedAt && !filters.showCompleted) ? (
