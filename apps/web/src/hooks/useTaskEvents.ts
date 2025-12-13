@@ -41,7 +41,8 @@ export const useTaskEvents = (getTaskListFn: () => Promise<ApiTaskResource[]>) =
         deadline: createdEvent.deadline ? new Date(createdEvent.deadline) : undefined,
         updatedAt: new Date(createdEvent.updatedAt),
         deletedAt: undefined,
-        revision: 0
+        revision: 0,
+        tags: []
       });
     });
     socket.on(TaskUpdatedEvent, (updatedEvent: ApiTaskUpdated) => {
@@ -49,9 +50,11 @@ export const useTaskEvents = (getTaskListFn: () => Promise<ApiTaskResource[]>) =
       const existing = tasks[updatedEvent.id];
       update({
         createdAt: existing.createdAt,
+        tags: existing.tags,
         ...updatedEvent,
         updatedAt: new Date(updatedEvent.updatedAt),
         deadline: updatedEvent.deadline ? new Date(updatedEvent.deadline) : undefined
+
       });
     });
     socket.on(TaskCompletedEvent, (event: ApiTaskCompleted) => {
