@@ -1,3 +1,4 @@
+import { ApiTagResource } from '@model/TagResource';
 import type { ApiTaskResource } from '@model/TaskResource';
 import { create } from 'zustand';
 
@@ -15,6 +16,8 @@ export interface TaskStore {
   update: (task: ApiTaskResource) => void;
   markComplete: (id: string, completedAt: Date, nextExpectedRevision: number) => void;
   reopen: (id: string, nextExpectedRevision: number) => void;
+  attachTagToTask: (taskId: string, tag: ApiTagResource, nextExpectedRevision: number) => void;
+  detachTagFromTask: (taskId: string, tagId: string, nextExpectedRevision: number) => void;
   remove: (id: string) => void;
 }
 
@@ -99,6 +102,27 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         [id]: { ... state.tasks[id], completedAt: undefined, revision: nextExpectedRevision }
       }
     };
+  }),
+  attachTagToTask: (taskId: string, tag: ApiTagResource, nextExpectedRevision: number) => set((state: { tasks: TaskMap}) => {
+    if (!(taskId in state.tasks)) return state;
+    const tags = state.tasks[taskId].tags;
+    tags!.push(tag);
+    return {
+      tasks: {
+        ...state.tasks,
+        [taskId]: { ...state.tasks[taskId], tags, revision: nextExpectedRevision }
+      }
+    };
+  }),
+  detachTagFromTask: (taskId: string, tagId: string, nextExpectedRevision: number) => set((state: { tasks: TaskMap }) => {
+    if (!(taskId in state.tasks)) return state;
+    const tags = state.tasks[taskId].tags!.filter(tag => tag.id === tagId);
+    return {
+      tasks: {
+        ...state.tasks,
+        [taskId]: { ...state.tasks[taskId], tags, revision: nextExpectedRevision }
+      }
+    }
   }),
   remove: (id: string) => set ((state: { tasks: TaskMap }) => {
     if (!(id in state.tasks)) return state;

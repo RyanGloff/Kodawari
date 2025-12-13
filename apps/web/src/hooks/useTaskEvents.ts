@@ -2,11 +2,15 @@ import { useEffect } from "react";
 import { socket } from "../api/SocketClient.js";
 import { useTaskStore } from "../state/TaskStore.js";
 import {
+  TagAttachedToTaskEvent,
+  TagDetachedFromTaskEvent,
   TaskCompletedEvent,
   TaskCreatedEvent,
   TaskDeletedEvent,
   TaskReopenedEvent,
   TaskUpdatedEvent,
+  type ApiTagAttachedToTask,
+  type ApiTagDetachedFromTask,
   type ApiTaskCompleted,
   type ApiTaskCreated,
   type ApiTaskDeleted,
@@ -24,6 +28,8 @@ export const useTaskEvents = (getTaskListFn: () => Promise<ApiTaskResource[]>) =
   const update = useTaskStore((s) => s.update);
   const markComplete = useTaskStore((s) => s.markComplete);
   const reopen = useTaskStore((s) => s.reopen);
+  const attachTagToTask = useTaskStore((s) => s.attachTagToTask);
+  const detachTagFromTask = useTaskStore((s) => s.detachTagFromTask);
   const remove = useTaskStore((s) => s.remove);
   const tasks = useTaskStore((s) => s.tasks);
 
@@ -64,6 +70,14 @@ export const useTaskEvents = (getTaskListFn: () => Promise<ApiTaskResource[]>) =
     socket.on(TaskReopenedEvent, (event: ApiTaskReopened) => {
       addToast("Task Reopened");
       reopen(event.id, event.revision);
+    });
+    socket.on(TagAttachedToTaskEvent, (event: ApiTagAttachedToTask) => {
+      addToast("Tag attached to Task");
+      attachTagToTask(event.taskId, event.tag, event.revision);
+    });
+    socket.on(TagDetachedFromTaskEvent, (event: ApiTagDetachedFromTask) => {
+      addToast("Tag detached from Task");
+      detachTagFromTask(event.taskId, event.tagId, event.revision);
     });
     socket.on(TaskDeletedEvent, (event: ApiTaskDeleted) => {
       addToast("Task Deleted");

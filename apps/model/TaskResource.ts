@@ -50,10 +50,12 @@ export type ApiTaskReopened = {
 };
 
 export type ApiTagAttachedToTask = {
-  tagId: string;
+  taskId: string;
+  tag: ApiTagResource;
 };
 
 export type ApiTagDetachedFromTask = {
+  taskId: string;
   tagId: string;
 };
 
