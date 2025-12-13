@@ -23,12 +23,27 @@ export type Filters = {
   showCompleted: boolean;
 };
 
+const TASK_PAGE_FILTERS_LS_KEY = 'TasksPageTaskListFilters';
+
+function getFiltersFromLocalStorage(): Filters | null {
+  const json = localStorage.getItem(TASK_PAGE_FILTERS_LS_KEY);
+  if (!json) {
+    return null;
+  }
+  return JSON.parse(json);
+}
+
 export function TasksPageTaskList() {
   const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
   const getSorted = useTaskStore((s: TaskStore) => s.getSortedTasks);
-  const [ filters, setFilters ] = useState<Filters>({
-    showCompleted: false
-  });
+  const persistedFiltersJSON = getFiltersFromLocalStorage() || {
+    showCompleted: true
+  }
+  const [ filters, setFiltersReact ] = useState<Filters>(persistedFiltersJSON);
+  const setFilters = (filters: Filters): void => {
+    localStorage.setItem(TASK_PAGE_FILTERS_LS_KEY, JSON.stringify(filters));
+    setFiltersReact(filters);
+  };
   const [ filtersDialogIsOpen, setFiltersDialogIsOpen ] = useState(false);
 
   const getTaskList = async (): Promise<ApiTaskResource[]> => {
