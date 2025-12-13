@@ -92,12 +92,20 @@ async function handleTaskEvent(event: RecordedEvent<EventType>) {
           `INSERT INTO task_tag(task_id, tag_id) VALUES ($1, $2)`,
           [event.streamId, tagAttachedToTaskEvent.tagId]
         );
+        await client.query(
+          `UPDATE tasks SET revision = $1 WHERE id = $2;`,
+          [event.revision, event.streamId]
+        );
         break;
 
       case TagDetachedFromTaskEvent:
         const tagDetachedFromTaskEvent = event.data as KurrentDBTagDetachedFromTask;
         await client.query(`DELETE FROM task_tag WHERE tag_id = $1 AND task_id = $2`,
           [event.streamId, tagDetachedFromTaskEvent.tagId]
+        );
+        await client.query(
+          `UPDATE tasks SET revision = $1 WHERE id = $2;`,
+          [event.revision, event.streamId]
         );
         break;
 
