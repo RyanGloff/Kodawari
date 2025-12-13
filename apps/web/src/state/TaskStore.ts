@@ -96,7 +96,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return {
       tasks: {
         ... state.tasks,
-        [id]: { ... state.tasks[id], completedAt: null, revision: nextExpectedRevision }
+        [id]: { ... state.tasks[id], completedAt: undefined, revision: nextExpectedRevision }
       }
     };
   }),
