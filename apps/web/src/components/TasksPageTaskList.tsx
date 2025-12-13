@@ -25,6 +25,7 @@ export type Filters = {
 
 export function TasksPageTaskList() {
   const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
+  const getSorted = useTaskStore((s: TaskStore) => s.getSortedTasks);
   const [ filters, setFilters ] = useState<Filters>({
     showCompleted: false
   });
@@ -32,9 +33,8 @@ export function TasksPageTaskList() {
 
   const getTaskList = async (): Promise<ApiTaskResource[]> => {
     const tasks = await getTasks();
-    tasks.sort(compareApiTaskResourceByExpiration);
     hydrate(tasks);
-    return tasks;
+    return getSorted();
   };
 
   useTaskEvents(getTaskList);
@@ -43,22 +43,6 @@ export function TasksPageTaskList() {
   const [createDialogIsOpen, setCreateDialogIsOpen] = useState<boolean>(false);
 
   const { addToast } = useToast();
-
-  const compareApiTaskResourceByExpiration = (
-    t1: ApiTaskResource,
-    t2: ApiTaskResource,
-  ): number => {
-    if (!t1.deadline) {
-      if (!t2.deadline) {
-        return t1.createdAt.getTime() - t2.createdAt.getTime();
-      }
-      return 1;
-    }
-    if (!t2.deadline) {
-      return -1;
-    }
-    return t1.deadline.getTime() - t2.deadline.getTime();
-  };
 
   const getSeverityLevel = (task: ApiTaskResource): string => {
     if (!task.deadline) {

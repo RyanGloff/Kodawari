@@ -23,10 +23,12 @@ export async function getTasks(
   const body = await response.json();
   const tasks: ApiTaskResource[] = body.tasks.map((task: any) => {
     task.deadline = task.deadline ? new Date(task.deadline) : undefined;
+    task.completedAt = task.completedAt ? new Date(task.completedAt) : undefined;
     task.createdAt = new Date(task.createdAt);
     task.updatedAt = new Date(task.updatedAt);
     return task;
   });
+  console.log(tasks);
 
   return tasks;
 }

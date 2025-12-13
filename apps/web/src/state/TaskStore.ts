@@ -6,9 +6,10 @@ export interface TaskMap {
 }
 
 export interface TaskStore {
-  tasks: TaskMap
+  tasks: TaskMap,
 
   // Actions
+  getSortedTasks: () => ApiTaskResource[];
   hydrate: (list: ApiTaskResource[]) => void;
   add: (task: ApiTaskResource) => void;
   update: (task: ApiTaskResource) => void;
@@ -17,8 +18,40 @@ export interface TaskStore {
   remove: (id: string) => void;
 }
 
-export const useTaskStore = create<TaskStore>((set) => ({
+export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: {},
+
+  getSortedTasks: () => {
+    const tasks = Object.values(get().tasks);
+    const openWithDeadline: ApiTaskResource[] = [];
+    const openNoDeadline: ApiTaskResource[] = [];
+    const completed: ApiTaskResource[] = [];
+    const deleted: ApiTaskResource[] = [];
+
+    for (const task of tasks) {
+      if (task.deletedAt) {
+        deleted.push(task);
+      } else if (task.completedAt) {
+        completed.push(task);
+      } else if (task.deadline) {
+        openWithDeadline.push(task);
+      } else {
+        openNoDeadline.push(task);
+      }
+    }
+
+    openWithDeadline.sort((a, b) => a.deadline!.getTime() - b.deadline!.getTime());
+    openNoDeadline.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    completed.sort((a, b) => b.completedAt!.getTime() - a.completedAt!.getTime());
+    deleted.sort((a, b) => b.deletedAt!.getTime() - a.deletedAt!.getTime());
+
+    return [
+      ...openWithDeadline,
+      ...openNoDeadline,
+      ...completed,
+      ...deleted
+    ];
+  },
 
   hydrate: (tasks: ApiTaskResource[]) => set(() => {
     const map: TaskMap = {};
