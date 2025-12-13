@@ -27,6 +27,7 @@ services:
 
   read-db:
     image: postgres:16
+    container_name: readdb
     restart: unless-stopped
     environment:
       POSTGRES_USER: kodawari
