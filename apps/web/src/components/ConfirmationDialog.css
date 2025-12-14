@@ -1,3 +1,9 @@
 .confirm {
   background: var(--reopen-blue);
 }
+.confirm:hover {
+  background: var(--reopen-blue-hover);
+}
+.confirm:active {
+  background: var(--reopen-blue-active);
+}
