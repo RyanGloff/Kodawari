@@ -1,11 +1,11 @@
 import ReactDOM from "react-dom";
 
-import './dialog.css';
-import "./CreateTaskDailog.css";
-import "./AppleCheckBox.css";
+import '../../css/dialog.css';
+import "./CreateTaskDialog.css";
+import "../../css/AppleCheckBox.css";
 import { useState } from "react";
-import { createTask } from "../api/TaskApiClient";
-import { useToast } from "./toast/ToastContext";
+import { createTask } from "../../api/TaskApiClient";
+import { useToast } from "../toast/ToastContext";
 
 type CreateTaskDialogProps = {
   open: boolean;

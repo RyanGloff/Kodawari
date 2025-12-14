@@ -1,4 +1,4 @@
-import './dialog.css';
+import '../../css/dialog.css';
 import './ConfirmationDialog.css';
 import ReactDOM from "react-dom";
 

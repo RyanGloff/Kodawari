@@ -1,23 +1,23 @@
 import { useState } from "react";
 import "./TasksPageTaskList.css";
-import { CreateTaskDialog } from "./CreateTaskDialog";
-import { TasksPageFiltersDialog } from './TasksPageFiltersDialog';
+import { CreateTaskDialog } from "../CreateTaskDialog/CreateTaskDialog";
+import { TasksPageFiltersDialog } from '../TasksPageFiltersDialog/TasksPageFiltersDialog';
 import {
   deleteTask,
   getTasks,
   markTaskComplete,
   reopenTask,
-} from "../api/TaskApiClient";
+} from "../../api/TaskApiClient";
 import {
   getCommonDateString,
   getRelativeTimeString,
   getSimpleDate,
-} from "../utils/DateUtils";
-import { useTaskStore, type TaskMap, type TaskStore } from "../state/TaskStore";
-import { useToast } from "./toast/ToastContext";
-import { useTaskEvents } from "../hooks/useTaskEvents";
+} from "../../utils/DateUtils";
+import { useTaskStore, type TaskMap, type TaskStore } from "../../state/TaskStore";
+import { useToast } from "../toast/ToastContext";
+import { useTaskEvents } from "../../hooks/useTaskEvents";
 import type { ApiTaskResource } from "@model/TaskResource";
-import { ConfirmationDialog } from "./ConfirmationDialog";
+import { ConfirmationDialog } from "../ConfirmationDialog/ConfirmationDialog";
 
 export type Filters = {
   showCompleted: boolean;

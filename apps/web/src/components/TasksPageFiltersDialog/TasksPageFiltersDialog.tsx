@@ -1,6 +1,6 @@
 import { ChangeEvent } from "react";
-import { Filters } from "./TasksPageTaskList";
-import './dialog.css';
+import { Filters } from "../TasksPageTaskList/TasksPageTaskList";
+import '../../css/dialog.css';
 import './TasksPageFiltersDialog.css';
 import ReactDOM from "react-dom";
 
