@@ -1,8 +1,16 @@
 .App {
   height: 100%;
   display: grid;
+  grid-template-rows: auto 1fr;
   grid-template-columns: auto 1fr;
-  grid-template-areas: "nav body";
+  grid-template-areas: 
+    "header header"
+    "nav body";
+}
+
+h1 {
+  text-align: center;
+  grid-area: header;
 }
 
 a {

@@ -16,6 +16,7 @@ function App() {
 
   return <ToastProvider>
     <div className="App">
+      <h1>Kodawari</h1>
       <nav>
         { navOn ? 
           <>
