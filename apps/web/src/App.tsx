@@ -1,42 +1,51 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import './App.css';
-import { ToastProvider } from './components/toast/ToastProvider';
+import "./App.css";
+import { ToastProvider } from "./components/toast/ToastProvider";
+import { supabase } from './utils/supabase';
+import { useApiAuth } from './hooks/useApiAuth';
 
 function App() {
-  const active = ({ isActive }: { isActive: boolean }) =>
-    isActive ? { textDecoration: "underline" } : undefined;
+  const {
+    user,
+    isAuthenticated,
+    loading,
+    login,
+    logout,
+  } = useApiAuth();
+  const [profileMenuIsOpen, setProfileMenuIsOpen] = useState(false);
+  const [optionsMenuIsOpen, setOptionsMenuIsOpen] = useState(false);
 
-  const [ isExpanded, setExpanded ] = useState(true);
-  const navOn = false;
-
-  const expandCollapseClicked = () => {
-    setExpanded(!isExpanded);
-  }
-
-  return <ToastProvider>
-    <div className="App">
-      <h1>Kodawari</h1>
-      <nav>
-        { navOn ? 
-          <>
-            <div className="nav-header">
-              <div className="expander" onClick={expandCollapseClicked}>
-                { isExpanded ? '<' : '>' }
-              </div>
-              <div className="user-view">
-                UserView
-              </div>
-            </div>
-            <NavLink to="/" style={active} end>{ isExpanded ? 'Home' : 'H' }</NavLink>
-            <NavLink to='/tasks' style={active}>{ isExpanded ? 'Tasks' : 'T' }</NavLink>
-          </> : '' }
-      </nav>
-      <div className="main">
-        <Outlet />
+  return (
+    <ToastProvider>
+      <div className="App">
+        <div className="header">
+          <div className="profile">
+            <img src={isAuthenticated ? user?.user_metadata.avatar_url : '/login.svg'} onClick={() => setProfileMenuIsOpen(!profileMenuIsOpen)}/>
+          </div>
+          <div className="profile-menu" hidden={!profileMenuIsOpen}>
+            {
+              isAuthenticated
+              ? <button onClick={logout}>Sign Out</button>
+              : <button onClick={login}>Sign In</button>
+            }
+          </div>
+          <h1>Kodawari</h1>
+          <div className="options">
+            <img src="/menu.svg" onClick={() => setOptionsMenuIsOpen(!optionsMenuIsOpen)}/>
+          </div>
+          <div className="options-menu" hidden={!optionsMenuIsOpen}>
+            <button>Unused</button>
+            <button>Unused</button>
+            <button>Unused</button>
+          </div>
+        </div>
+        <div className="main">
+          <Outlet />
+        </div>
       </div>
-    </div>
-  </ToastProvider>;
+    </ToastProvider>
+  );
 }
 
 export default App;

@@ -1,4 +1,7 @@
 services:
+  #-----------------------------------#
+  # Infrastructure                    #
+  #-----------------------------------#
   kurrentdb:
     image: kurrentplatform/kurrentdb:25.1.0
     platform: linux/amd64
@@ -57,6 +60,10 @@ services:
       --password=kodawari
       update
 
+  #-----------------------------------#
+  # Projection Workers                #
+  #-----------------------------------#
+
   api-projection-worker:
     build:
       context: .
@@ -76,6 +83,10 @@ services:
       kurrentdb:
         condition: service_healthy
 
+
+  #-----------------------------------#
+  # Services                          #
+  #-----------------------------------#
   api:
     build:
       context: .
