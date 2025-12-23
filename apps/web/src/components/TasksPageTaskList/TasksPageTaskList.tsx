@@ -18,6 +18,7 @@ import { useToast } from "../toast/ToastContext";
 import { useTaskEvents } from "../../hooks/useTaskEvents";
 import type { ApiTaskResource } from "@model/TaskResource";
 import { ConfirmationDialog } from "../ConfirmationDialog/ConfirmationDialog";
+import { useAuth } from "../../hooks/useAuth";
 
 export type Filters = {
   showCompleted: boolean;
@@ -34,6 +35,7 @@ function getFiltersFromLocalStorage(): Filters | null {
 }
 
 export function TasksPageTaskList() {
+  const { session } = useAuth();
   const hydrate = useTaskStore((s: TaskStore) => s.hydrate);
   const getSorted = useTaskStore((s: TaskStore) => s.getSortedTasks);
   const persistedFiltersJSON = getFiltersFromLocalStorage() || {
@@ -47,7 +49,11 @@ export function TasksPageTaskList() {
   const [ filtersDialogIsOpen, setFiltersDialogIsOpen ] = useState(false);
 
   const getTaskList = async (): Promise<ApiTaskResource[]> => {
-    const tasks = await getTasks();
+    if (!session) {
+      console.log("no access_token");
+      return [];
+    }
+    const tasks = await getTasks(session?.access_token);
     hydrate(tasks);
     return getSorted();
   };
@@ -81,7 +87,10 @@ export function TasksPageTaskList() {
   };
 
   const markDoneClicked = (id: string, expectedRevision: number): void => {
-    markTaskComplete(id, expectedRevision)
+    if (!session?.access_token) {
+      return;
+    }
+    markTaskComplete(session?.access_token, id, expectedRevision)
       .then((_v: any) => {
         const detailsEle = document.getElementById(
           `TaskDetailsElement-${id}`,
@@ -97,7 +106,10 @@ export function TasksPageTaskList() {
   };
 
   const reopenClicked = (id: string, expectedRevision: number): void => {
-    reopenTask(id, expectedRevision).catch((e: any) => {
+    if (!session?.access_token) {
+      return;
+    }
+    reopenTask(session?.access_token, id, expectedRevision).catch((e: any) => {
       addToast("Failed to reopen task", "error");
       console.error(e);
     });
@@ -113,11 +125,11 @@ export function TasksPageTaskList() {
 
   const deleteConfirmationClosed = (accepted: boolean): void => {
     setDeleteConfirmationOpen(false);
-    if (!accepted || !taskIdToDelete) {
+    if (!accepted || !taskIdToDelete || !session?.access_token) {
       return;
     }
 
-    deleteTask(taskIdToDelete).catch((e: any) => {
+    deleteTask(session?.access_token, taskIdToDelete).catch((e: any) => {
       addToast("Failed to delete task", "error");
       console.error(e);
     });

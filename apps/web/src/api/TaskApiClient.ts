@@ -6,12 +6,14 @@ export type GetTasksOptions = {
 };
 
 export async function getTasks(
+  accessToken: string,
   options?: GetTasksOptions,
 ): Promise<ApiTaskResource[]> {
   const response = await fetch(`${apiUrl}/task`, {
     method: "GET",
     headers: {
       ContentType: "application/json",
+      Authorization: `Bearer ${accessToken}`
     },
     body: options ? JSON.stringify(options) : undefined,
   });
@@ -28,7 +30,6 @@ export async function getTasks(
     task.updatedAt = new Date(task.updatedAt);
     return task;
   });
-  console.log(tasks);
 
   return tasks;
 }
@@ -41,11 +42,12 @@ export type CreateTaskOptions = {
   name: string
   deadline?: Date | null
 };
-export async function createTask(options: CreateTaskOptions): Promise<CreateTaskResponse> {
+export async function createTask(accessToken: string, options: CreateTaskOptions): Promise<CreateTaskResponse> {
   const response = await fetch(`${apiUrl}/task`, {
     method: 'POST',
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`
     },
     body: JSON.stringify(options)
   });
@@ -62,6 +64,7 @@ export type MarkTaskCompleteResponse = {
   nextExpectedRevision: number;
 };
 export async function markTaskComplete(
+  accessToken: string,
   taskId: string,
   expectedRevision: number,
 ): Promise<MarkTaskCompleteResponse> {
@@ -69,6 +72,7 @@ export async function markTaskComplete(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authentication: `Bearer ${accessToken}`
     },
     body: JSON.stringify({ expectedRevision }),
   });
@@ -85,6 +89,7 @@ export type ReopenTaskResponse = {
   nextExpectedRevision: number;
 };
 export async function reopenTask(
+  accessToken: string,
   taskId: string,
   expectedRevision: number,
 ): Promise<ReopenTaskResponse> {
@@ -92,6 +97,7 @@ export async function reopenTask(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`
     },
     body: JSON.stringify({ expectedRevision }),
   });
@@ -104,9 +110,12 @@ export async function reopenTask(
   return body;
 }
 
-export async function deleteTask(id: string): Promise<void> {
+export async function deleteTask(accessToken: string, id: string): Promise<void> {
   const response = await fetch(`${apiUrl}/task/${id}`, {
     method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
   });
 
   if (!response.ok) {

@@ -47,6 +47,8 @@ export function useApiAuth() {
 
   return {
     user,
+    session,
+    access_token: session?.access_token,
     isAuthenticated,
     loading,
     login,

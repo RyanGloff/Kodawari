@@ -8,8 +8,9 @@ export const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <Home /> },
-      { path: 'tasks', element: <Tasks /> }
+      //{ index: true, element: <Home /> },
+      //{ path: 'tasks', element: <Tasks /> }
+      { index: true, element: <Tasks /> }
     ],
   },
   { path: "*", element: <h1>404 Not Found</h1> },

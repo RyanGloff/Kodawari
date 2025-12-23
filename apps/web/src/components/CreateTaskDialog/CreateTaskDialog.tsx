@@ -6,6 +6,8 @@ import "../../css/AppleCheckBox.css";
 import { useState } from "react";
 import { createTask } from "../../api/TaskApiClient";
 import { useToast } from "../toast/ToastContext";
+import { useApiAuth } from "../../hooks/useApiAuth";
+import { useAuth } from "../../hooks/useAuth";
 
 type CreateTaskDialogProps = {
   open: boolean;
@@ -24,6 +26,7 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
     { label: { quantity: 3, scale: "Month" }, value: 60 * 24 * 60 * 60 * 1000 },
   ];
   const { addToast } = useToast();
+  const { session } = useAuth();
 
   const [name, setName] = useState<string>("");
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -41,7 +44,12 @@ export function CreateTaskDialog({ open, onClose }: CreateTaskDialogProps) {
       deadline,
     };
 
-    createTask(req).catch((e) => {
+    if (!session?.access_token) {
+      addToast("Unauthenticated", "error");
+      return;
+    }
+
+    createTask(session?.access_token, req).catch((e) => {
       addToast("Failed to create task", "error");
       console.error(e);
     });
