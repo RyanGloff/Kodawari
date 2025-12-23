@@ -5,6 +5,7 @@ import cors from "cors";
 import healthRouter from "./routes/health.js";
 import ApiRouter from "./routes/ApiRouter.js";
 import { socketStore } from "./socketStore.js";
+import { authenticate } from "./middleware/auth.js";
 
 const PORT = parseInt(process.env.port ?? "3000", 10);
 const app = express();
@@ -18,6 +19,7 @@ const io = new Server(server, {
 
 app.use(express.json());
 app.use(cors());
+app.use(authenticate);
 app.use("/health", healthRouter);
 app.use("/api", ApiRouter);
 
