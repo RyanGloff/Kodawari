@@ -32,8 +32,8 @@ async function handleTaskEvent(event: RecordedEvent<EventType>) {
       case TaskCreatedEvent:
         const taskCreatedEvent = event.data as KurrentDBTaskCreated;
         await client.query(
-          `INSERT INTO tasks (id, name, revision, deleted_at, created_at, updated_at, deadline)
-           VALUES ($1, $2, $3, NULL, $4, $5, $6)
+          `INSERT INTO tasks (id, name, revision, deleted_at, created_at, updated_at, deadline, user_id)
+           VALUES ($1, $2, $3, NULL, $4, $5, $6, $7)
            ON CONFLICT (id) DO NOTHING`,
           [
             event.streamId,
@@ -42,6 +42,7 @@ async function handleTaskEvent(event: RecordedEvent<EventType>) {
             event.created,
             event.created,
             taskCreatedEvent.deadline,
+            taskCreatedEvent.userId
           ],
         );
         break;

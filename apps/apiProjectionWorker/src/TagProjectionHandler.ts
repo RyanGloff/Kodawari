@@ -24,13 +24,14 @@ async function handleTagEvent(event: RecordedEvent<EventType>) {
       case TagCreatedEvent:
         const tagCreatedEvent = event.data as KurrentDBTagCreated;
         await client.query(
-          `INSERT INTO tags (id, name, deleted_at, created_at, updated_at, revision)
-           VALUES ($1, $2, NULL, $3, $4, 0)`,
+          `INSERT INTO tags (id, name, deleted_at, created_at, updated_at, revision, user_id)
+           VALUES ($1, $2, NULL, $3, $4, 0, $5)`,
           [
             event.streamId,
             tagCreatedEvent.name,
             event.created,
             event.created,
+            tagCreatedEvent.userId
           ],
         );
         break;
