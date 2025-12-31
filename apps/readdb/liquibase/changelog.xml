@@ -12,5 +12,6 @@
     <include file="changes/0004-add-completed_at-to-tasks.xml" relativeToChangelogFile="true"/>
     <include file="changes/0005-create-tags-table.xml" relativeToChangelogFile="true"/>
     <include file="changes/0006-create-task-tag-join-table.xml" relativeToChangelogFile="true"/>
+    <include file="changes/0007-add-users.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
 

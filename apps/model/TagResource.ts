@@ -18,6 +18,7 @@ export type ApiTagCreated = {
   name: string;
   createdAt: string;
   updatedAt: string;
+  userId: string;
 };
 
 export type ApiTagUpdated = {
@@ -35,6 +36,7 @@ export type ApiTagDeleted = {
 // KurrentDB Events
 export type KurrentDBTagCreated = {
   name: string;
+  userId: string;
 };
 
 export type KurrentDBTagUpdated = {

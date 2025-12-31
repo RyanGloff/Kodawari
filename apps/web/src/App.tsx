@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import "./App.css";
 import { ToastProvider } from "./components/toast/ToastProvider";
-import { supabase } from './utils/supabase';
 import { AuthGate } from "./components/AuthGate";
 import { AuthProvider } from "./provider/AuthProvider";
 import { useAuth } from "./hooks/useAuth";

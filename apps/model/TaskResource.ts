@@ -10,6 +10,7 @@ export type ApiTaskResource = {
   updatedAt: Date;                      // Created time of latest KurrentDB Event
   deletedAt?: Date;                     // Created time of KurrentDBTaskDeleted Event
   revision: number;                     // Revision of latest KurrentDB Event
+  userId: string;                       // User that owns the task
 };
 
 // Event Names
@@ -28,6 +29,7 @@ export type ApiTaskCreated = {
   deadline?: string;
   createdAt: string;
   updatedAt: string;
+  userId: string;
 };
 
 export type ApiTaskUpdated = {
@@ -68,6 +70,7 @@ export type ApiTaskDeleted = {
 export type KurrentDBTaskCreated = {
   name: string;
   deadline?: Date;
+  userId: string;
 };
 
 export type KurrentDBTaskUpdated = {

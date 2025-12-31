@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { Router } from "express";
+import { Router, Response } from "express";
 import { kdb } from "../kurrent.js";
 import z from "zod";
 import {
@@ -43,6 +43,7 @@ type PgTaskRow = {
   deleted_at: Date | null;
   revision: number;
   tags: PgTagRow[] | undefined;
+  user_id: string;
 };
 const psqlRowToApiResource = (row: PgTaskRow): ApiTaskResource => {
   return {
@@ -64,6 +65,7 @@ type PgTagRow = {
   updated_at: Date;
   deleted_at: Date | null;
   revision: number;
+  user_id: string;
 };
 const psqlTagRowToApiResource = (row: PgTagRow): ApiTaskResource => {
   return {
@@ -76,6 +78,37 @@ const psqlTagRowToApiResource = (row: PgTagRow): ApiTaskResource => {
   };
 };
 
+const ensureUserOwnsTask = async (res: Response, taskId: string, userId?: string): Promise<void> => {
+  try {
+    const streamRes = kdb.readStream(taskId, {
+      fromRevision: START,
+      maxCount: 1,
+    });
+    const createdEvent = await streamRes.next();
+    if (createdEvent.value.event.userId !== userId) {
+      res.sendStatus(404);
+      return;
+    }
+  } catch (err) {
+    res.sendStatus(500);
+  }
+};
+const ensureUserOwnsTag = async (res: Response, tagId: string, userId?: string): Promise<void> => {
+  try {
+    const streamRes = kdb.readStream(tagId, {
+      fromRevision: START,
+      maxCount: 1,
+    });
+    const createdEvent = await streamRes.next();
+    if (createdEvent.value.event.userId !== userId) {
+      res.sendStatus(404);
+      return;
+    }
+  } catch (err) {
+    res.sendStatus(500);
+  }
+};
+
 // ---------- Get Task By Id -------
 const getByIdOptionsSchema = z.object({
   includeTags: z.coerce.boolean().default(true)
@@ -83,6 +116,7 @@ const getByIdOptionsSchema = z.object({
 type GetByIdOptions = z.infer<typeof getByIdOptionsSchema>;
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
+  await ensureUserOwnsTask(res, id, req.user?.id);
 
   const parseResult = getByIdOptionsSchema.safeParse(req.body);
 
@@ -96,8 +130,8 @@ router.get("/:id", async (req, res) => {
   const options = parseResult.data;
 
   const taskProjectionRes = await pg.query(
-    `SELECT * FROM public.tasks WHERE id = $1;`,
-    [id],
+    `SELECT * FROM public.tasks WHERE id = $1 AND user_id = $2;`,
+    [id, req.user?.id],
   );
   if (taskProjectionRes.rows.length === 0) {
     res.sendStatus(404);
@@ -127,7 +161,6 @@ type GetAllOptions = z.infer<typeof getAllOptionsSchema>;
 
 router.get("/", async (req, res) => {
   const parseResult = getAllOptionsSchema.safeParse(req.body);
-  console.log(JSON.stringify(parseResult));
   if (!parseResult.success) {
     return res.status(400).json({
       error: "Invalid request body",
@@ -152,11 +185,11 @@ FROM tasks t
 ${getAllOptions.includeTags ? `
 LEFT JOIN task_tag tt ON tt.task_id = t.id
 LEFT JOIN tags tg ON tg.id = tt.tag_id
+WHERE t.user_id = $1
 GROUP BY t.id` : ''}
 ORDER BY t.id;
 `;
-  const taskProjectionRes = await pg.query(sql);
-  console.log(JSON.stringify(taskProjectionRes.rows));
+  const taskProjectionRes = await pg.query(sql, [req.user?.id]);
   const tasks = taskProjectionRes.rows.map(psqlRowToApiResource);
 
   res.json({ tasks });
@@ -187,7 +220,8 @@ router.post("/", async (req, res) => {
     deadline:
       createTaskRequest.deadline === null
         ? undefined
-        : createTaskRequest.deadline
+        : createTaskRequest.deadline,
+    userId: req.user?.id
   };
 
   const event = jsonEvent({
@@ -210,6 +244,7 @@ router.post("/", async (req, res) => {
       ...taskCreated,
       createdAt: createdEvent.value.event.created,
       revision: Number(nextExpectedRevision),
+      userId: req.user?.id
     });
     return res.status(201).json({ id, status: "created" });
   } catch (err) {
@@ -234,6 +269,7 @@ type MarkTaskCompletedRequest = z.infer<typeof markTaskCompletedRequestSchema>;
 
 router.post("/:id/complete", async (req, res) => {
   const id = req.params.id;
+  await ensureUserOwnsTask(res, id, req.user?.id);
 
   const parseResult = markTaskCompletedRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -300,6 +336,8 @@ type ReopenTaskRequest = z.infer<typeof reopenTaskRequestSchema>;
 router.post("/:id/reopen", async (req, res) => {
   const id = req.params.id;
 
+  await ensureUserOwnsTask(res, id, req.user?.id);
+
   const parseResult = reopenTaskRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
     return res.status(400).json({
@@ -364,6 +402,7 @@ type UpdateTaskRequest = z.infer<typeof updateTaskRequestSchema>;
 
 router.put("/:id", async (req, res) => {
   const id = req.params.id;
+  await ensureUserOwnsTask(res, id, req.user?.id);
 
   const parseResult = updateTaskRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -425,6 +464,7 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const id = req.params.id;
+  await ensureUserOwnsTask(res, id, req.user?.id);
 
   const event = jsonEvent({
     type: TaskDeletedEvent,
@@ -463,6 +503,7 @@ const attachTagRequestSchema = z.object({
 type AttachTagRequest = z.infer<typeof attachTagRequestSchema>;
 router.post("/:id/attachTag", async (req, res) => {
   const taskId = req.params.id;
+  await ensureUserOwnsTask(res, taskId, req.user?.id);
 
   const parseResult = attachTagRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -472,6 +513,7 @@ router.post("/:id/attachTag", async (req, res) => {
     });
   }
   const attachTagRequest: AttachTagRequest = parseResult.data;
+  await ensureUserOwnsTag(res, attachTagRequest.tagId, req.user?.id);
 
   const tagAttachedToTask: KurrentDBTagAttachedToTask = {
     tagId: attachTagRequest.tagId,

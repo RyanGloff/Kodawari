@@ -5,21 +5,22 @@ import cors from "cors";
 import healthRouter from "./routes/health.js";
 import ApiRouter from "./routes/ApiRouter.js";
 import { socketStore } from "./socketStore.js";
-import { authenticate } from "./middleware/auth.js";
 
 const PORT = parseInt(process.env.port ?? "3000", 10);
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: true,
     methods: ["GET", "POST"],
+    allowedHeaders: ["Authorization"],
+    credentials: true
   },
 });
 
 app.use(express.json());
 app.use(cors());
-app.use(authenticate);
+app.options("*", cors());
 app.use("/health", healthRouter);
 app.use("/api", ApiRouter);
 
@@ -28,7 +29,7 @@ io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
   socketStore.putSocket(id, socket);
 
-  socket.on("disconnected", () => {
+  socket.on("disconnect", () => {
     console.log("Client disconnected", socket.id);
     socketStore.removeSocket(id);
   });
